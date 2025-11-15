@@ -1,17 +1,26 @@
 """Tests for parallel execution of independent tools."""
 
 import time
-import pytest
 from typing import Tuple
+from unittest.mock import Mock
+
+import pytest
+
 from bestla.yggdrasil import Agent, Toolkit, tool
+
+
+@pytest.fixture
+def mock_provider():
+    """Create a mock OpenAI provider."""
+    return Mock()
 
 
 class TestParallelExecution:
     """Test parallel execution functionality."""
 
-    def test_independent_tools_run_in_parallel(self):
+    def test_independent_tools_run_in_parallel(self, mock_provider):
         """Test that independent tools actually execute in parallel."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         execution_times = []
 
@@ -92,9 +101,9 @@ class TestParallelExecution:
         assert execution_order == ["step1_start", "step1_end", "step2_start", "step2_end"]
         assert len(results) == 2
 
-    def test_parallel_context_updates_merge(self):
+    def test_parallel_context_updates_merge(self, mock_provider):
         """Test that context updates from parallel tools merge correctly."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         def tool1() -> Tuple[str, dict]:
             return "result1", {"key1": "value1", "shared": "from_tool1"}
@@ -131,9 +140,9 @@ class TestParallelExecution:
         assert context.has("shared")
         assert context.get("shared") in ["from_tool1", "from_tool2"]
 
-    def test_parallel_tool_failure_doesnt_stop_others(self):
+    def test_parallel_tool_failure_doesnt_stop_others(self, mock_provider):
         """Test that failure of one parallel tool doesn't stop others."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         executed = []
 
@@ -174,9 +183,9 @@ class TestParallelExecution:
         assert success_count == 2
         assert failure_count == 1
 
-    def test_mixed_toolkit_and_independent_parallel(self):
+    def test_mixed_toolkit_and_independent_parallel(self, mock_provider):
         """Test that toolkit tools and independent tools can run in parallel."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         # Create a toolkit with sequential tools
         toolkit = Toolkit()

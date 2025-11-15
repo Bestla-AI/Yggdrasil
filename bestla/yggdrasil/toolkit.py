@@ -1,16 +1,13 @@
 """Toolkit class for managing related tools with shared context."""
 
-from typing import Any, Callable, Dict, List, Set, Tuple
-from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Callable, Dict, List, Set
 
 from bestla.yggdrasil.context import Context
-from bestla.yggdrasil.tool import Tool
 from bestla.yggdrasil.exceptions import (
-    ToolNotAvailableError,
-    ContextRequirementError,
     ToolkitPipelineError,
 )
+from bestla.yggdrasil.tool import Tool
 
 
 class Toolkit:
@@ -304,8 +301,6 @@ class Toolkit:
         Returns:
             List of result dicts (may include both successes and failures)
         """
-        # Create context snapshot for all tools
-        context_snapshot = self.context.to_dict()
 
         def execute_single_tool(call: dict) -> dict:
             """Execute a single tool with context snapshot."""

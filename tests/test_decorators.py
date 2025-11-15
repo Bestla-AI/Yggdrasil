@@ -1,9 +1,11 @@
 """Tests for decorators."""
 
 import time
-import pytest
 from typing import Tuple
-from bestla.yggdrasil.decorators import retry, cache_result, rate_limit
+
+import pytest
+
+from bestla.yggdrasil.decorators import cache_result, rate_limit, retry
 
 
 class TestRetryDecorator:

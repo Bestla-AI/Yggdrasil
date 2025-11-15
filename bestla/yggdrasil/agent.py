@@ -1,21 +1,22 @@
 """Agent class for orchestrating toolkits and LLM interactions."""
 
 import json
-from typing import Any, Callable, Dict, List, Tuple
-from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import Any, Callable, Dict, List, Tuple
 
 from openai import OpenAI
 from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
     ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
+    ChatCompletionToolMessageParam,
     ChatCompletionUserMessageParam,
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionToolMessageParam
 )
-from bestla.yggdrasil.toolkit import Toolkit
-from bestla.yggdrasil.tool import Tool
+
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
+from bestla.yggdrasil.tool import Tool
+from bestla.yggdrasil.toolkit import Toolkit
 
 
 def _group_tool_calls_by_toolkit(
@@ -264,7 +265,7 @@ class Agent:
                         ChatCompletionToolMessageParam(
                             tool_call_id=call["id"],
                             role="tool",
-                            content=f"Error: Pipeline failed before this tool executed",
+                            content="Error: Pipeline failed before this tool executed",
                         )
                     )
 

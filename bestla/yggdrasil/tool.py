@@ -3,7 +3,7 @@
 import inspect
 from typing import Any, Callable, Dict, List, Tuple, get_type_hints
 
-from bestla.yggdrasil.dynamic_types import generate_param_schema, is_dynamic_type
+from bestla.yggdrasil.dynamic_types import generate_param_schema
 
 
 class Tool:

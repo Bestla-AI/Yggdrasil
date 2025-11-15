@@ -1,8 +1,9 @@
 """Tests for advanced dynamic types: DynamicUnion and DynamicConditional."""
 
 import pytest
+
 from bestla.yggdrasil import Context
-from bestla.yggdrasil.dynamic_types import DynamicUnion, DynamicConditional
+from bestla.yggdrasil.dynamic_types import DynamicConditional, DynamicUnion
 
 
 class TestDynamicUnion:
@@ -159,7 +160,9 @@ class TestDynamicConditional:
         context.set("enabled_options", ["a", "b", "c"])
         context.set("disabled_options", ["x"])
 
-        dynamic_type = DynamicConditional[("feature_enabled", "enabled_options", "disabled_options")]
+        dynamic_type = DynamicConditional[
+            ("feature_enabled", "enabled_options", "disabled_options")
+        ]
         schema = dynamic_type.generate_schema(context)
 
         # None is falsy, should use disabled_options

@@ -1,6 +1,7 @@
 """Tests for Context class."""
 
 import pytest
+
 from bestla.yggdrasil import Context, ContextValidationError
 
 

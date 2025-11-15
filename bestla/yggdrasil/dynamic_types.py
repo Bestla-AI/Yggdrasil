@@ -436,7 +436,10 @@ class DynamicConditional:
 
     def __init__(self, params: Tuple[str, str, str]):
         if len(params) != 3:
-            raise ValueError("DynamicConditional requires exactly 3 parameters: (condition_key, true_key, false_key)")
+            raise ValueError(
+                "DynamicConditional requires exactly 3 parameters: "
+                "(condition_key, true_key, false_key)"
+            )
         self.condition_key, self.true_key, self.false_key = params
 
     def __class_getitem__(cls, params: Tuple[str, str, str]) -> "DynamicConditional":
@@ -511,17 +514,17 @@ def generate_param_schema(annotation: Any, context: Any, filters: dict | None = 
         return annotation.generate_schema(context, filters)
     elif is_dynamic_type(annotation):
         return annotation.generate_schema(context)
-    elif annotation == str:
+    elif annotation is str:
         return {"type": "string"}
-    elif annotation == int:
+    elif annotation is int:
         return {"type": "integer"}
-    elif annotation == float:
+    elif annotation is float:
         return {"type": "number"}
-    elif annotation == bool:
+    elif annotation is bool:
         return {"type": "boolean"}
-    elif annotation == list or annotation == List:
+    elif annotation is list or annotation is List:
         return {"type": "array"}
-    elif annotation == dict or annotation == Dict:
+    elif annotation is dict or annotation is Dict:
         return {"type": "object"}
     else:
         # Unknown type, default to generic

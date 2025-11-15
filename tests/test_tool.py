@@ -1,8 +1,8 @@
 """Tests for Tool class."""
 
-import pytest
 from typing import Tuple
-from bestla.yggdrasil import Tool, tool, Context, DynamicStr
+
+from bestla.yggdrasil import Context, DynamicStr, Tool, tool
 
 
 class TestTool:

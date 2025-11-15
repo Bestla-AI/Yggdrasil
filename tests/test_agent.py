@@ -1,9 +1,11 @@
 """Tests for Agent class."""
 
-import pytest
 from typing import Tuple
-from unittest.mock import Mock, MagicMock, patch
-from bestla.yggdrasil import Agent, Toolkit, Tool, tool
+from unittest.mock import Mock
+
+import pytest
+
+from bestla.yggdrasil import Agent, Toolkit, tool
 
 
 @pytest.fixture
@@ -149,8 +151,6 @@ class TestAgent:
         agent.add_toolkit("test", toolkit)
 
         # Mock the run method to modify context
-        original_run = agent.run
-
         def mock_run(query):
             agent.toolkits["test"].context.set("key", "modified")
             return "result"

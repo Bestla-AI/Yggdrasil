@@ -58,3 +58,17 @@ disallow_untyped_defs = false
 [tool.ruff]
 line-length = 100
 target-version = "py39"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "W",   # pycodestyle warnings
+    "I",   # isort
+]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+# Tests can use assertions and relative imports
+# F821: DynamicStr/DynamicFiltered use string literals that aren't variables
+"tests/**/*.py" = ["S101", "F821"]

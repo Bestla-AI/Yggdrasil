@@ -1,7 +1,7 @@
 """Decorators for tool functions."""
 
-import time
 import functools
+import time
 from typing import Callable, Tuple, Type, Union
 
 

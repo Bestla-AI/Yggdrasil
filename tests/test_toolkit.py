@@ -1,8 +1,10 @@
 """Tests for Toolkit class."""
 
-import pytest
 from typing import Tuple
-from bestla.yggdrasil import Toolkit, Tool, tool, Context, DynamicStr
+
+import pytest
+
+from bestla.yggdrasil import Context, DynamicStr, Toolkit, tool
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
 
@@ -98,7 +100,7 @@ class TestToolkit:
         assert not toolkit.is_tool_available("action2")
 
         # Execute action1
-        results = toolkit.execute_sequential([
+        _ = toolkit.execute_sequential([
             {"name": "action1", "arguments": {}}
         ])
 
