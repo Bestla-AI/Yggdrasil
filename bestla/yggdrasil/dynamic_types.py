@@ -9,7 +9,7 @@ Example:
         ...
 """
 
-from typing import Any, Dict, List, Tuple, Union as TypingUnion
+from typing import Any, Dict, List, Tuple
 
 
 class DynamicType:
@@ -165,7 +165,7 @@ class DynamicArray:
         if value is None:
             return {"type": "array"}
 
-        schema = {"type": "array"}
+        schema: Dict[str | List[str]] = {"type": "array"}
         if isinstance(value, list):
             schema["items"] = {"type": "string", "enum": value}
         elif isinstance(value, dict) and "items" in value:
@@ -191,7 +191,7 @@ class DynamicFormat:
     def __class_getitem__(cls, format_type: str) -> "DynamicFormat":
         return cls(format_type)
 
-    def generate_schema(self, context: Any) -> dict:
+    def generate_schema(self, _: Any) -> dict:
         """Generate string schema with format."""
         return {"type": "string", "format": self.format_type}
 
