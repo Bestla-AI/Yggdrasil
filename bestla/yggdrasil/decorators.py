@@ -2,7 +2,7 @@
 
 import time
 import functools
-from typing import Callable, Optional, Tuple, Type, Union
+from typing import Callable, Tuple, Type, Union
 
 
 def retry(
@@ -158,7 +158,7 @@ def timeout(seconds: float):
     return decorator
 
 
-def cache_result(ttl: Optional[float] = None):
+def cache_result(ttl: float | None = None):
     """Cache decorator for tool results.
 
     Caches the result of a tool function. Useful for expensive operations

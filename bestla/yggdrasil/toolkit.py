@@ -1,6 +1,6 @@
 """Toolkit class for managing related tools with shared context."""
 
-from typing import Any, Callable, Dict, List, Optional, Set, Tuple
+from typing import Any, Callable, Dict, List, Set, Tuple
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
@@ -62,11 +62,11 @@ class Toolkit:
         self,
         name: str,
         function: Callable,
-        requires_context: Optional[List[str]] = None,
-        provides_context: Optional[List[str]] = None,
-        unlocks: Optional[List[str]] = None,
-        locks: Optional[List[str]] = None,
-        description: Optional[str] = None,
+        requires_context: List[str] | None = None,
+        provides_context: List[str] | None = None,
+        unlocks: List[str] | None = None,
+        locks: List[str] | None = None,
+        description: str | None = None,
     ) -> Tool:
         """Add a tool to this toolkit.
 

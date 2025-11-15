@@ -1,7 +1,7 @@
 """Tool class for wrapping functions with metadata."""
 
 import inspect
-from typing import Any, Callable, Dict, List, Optional, Tuple, get_type_hints
+from typing import Any, Callable, Dict, List, Tuple, get_type_hints
 
 from bestla.yggdrasil.dynamic_types import generate_param_schema, is_dynamic_type
 
@@ -17,12 +17,12 @@ class Tool:
     def __init__(
         self,
         function: Callable,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        requires_context: Optional[List[str]] = None,
-        provides_context: Optional[List[str]] = None,
-        unlocks: Optional[List[str]] = None,
-        locks: Optional[List[str]] = None,
+        name: str | None = None,
+        description: str | None = None,
+        requires_context: List[str] | None = None,
+        provides_context: List[str] | None = None,
+        unlocks: List[str] | None = None,
+        locks: List[str] | None = None,
     ):
         """Initialize a tool.
 
@@ -53,7 +53,7 @@ class Tool:
             # get_type_hints can fail for forward references
             self.type_hints = {}
 
-    def generate_schema(self, context: Any, filters: Optional[dict] = None) -> dict:
+    def generate_schema(self, context: Any, filters: dict | None = None) -> dict:
         """Generate JSON schema for this tool based on current context.
 
         Args:
@@ -131,12 +131,12 @@ class Tool:
 
 
 def tool(
-    requires: Optional[List[str]] = None,
-    provides: Optional[List[str]] = None,
-    unlocks: Optional[List[str]] = None,
-    locks: Optional[List[str]] = None,
-    name: Optional[str] = None,
-    description: Optional[str] = None,
+    requires: List[str] | None = None,
+    provides: List[str] | None = None,
+    unlocks: List[str] | None = None,
+    locks: List[str] | None = None,
+    name: str | None = None,
+    description: str | None = None,
 ):
     """Decorator to create a Tool from a function.
 

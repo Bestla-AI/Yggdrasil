@@ -1,16 +1,62 @@
 """Agent class for orchestrating toolkits and LLM interactions."""
 
 import json
-from typing import Any, Callable, Dict, List, Optional, Tuple
+from typing import Any, Callable, Dict, List, Tuple
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
 
 from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam
-
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
+    ChatCompletionUserMessageParam,
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolMessageParam
+)
 from bestla.yggdrasil.toolkit import Toolkit
 from bestla.yggdrasil.tool import Tool
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
+
+
+def _group_tool_calls_by_toolkit(
+        tool_calls: List[dict]
+) -> Dict[str, List[dict]]:
+    """Group tool calls by their toolkit.
+
+    Args:
+        tool_calls: List of tool call dicts from LLM
+
+    Returns:
+        Dict mapping toolkit identifier to list of calls
+        Special key "independent" for independent tools
+    """
+    groups = defaultdict(list)
+
+    for call in tool_calls:
+        tool_name = call["function"]["name"]
+
+        # Check if it's a prefixed tool
+        if "::" in tool_name:
+            prefix, base_name = tool_name.split("::", 1)
+            # Remove prefix for toolkit execution
+            groups[prefix].append(
+                {
+                    "id": call["id"],
+                    "name": base_name,
+                    "arguments": json.loads(call["function"]["arguments"]),
+                }
+            )
+        else:
+            # Independent tool
+            groups["independent"].append(
+                {
+                    "id": call["id"],
+                    "name": tool_name,
+                    "arguments": json.loads(call["function"]["arguments"]),
+                }
+            )
+
+    return dict(groups)
 
 
 class Agent:
@@ -25,10 +71,10 @@ class Agent:
     """
 
     def __init__(
-        self,
-        model: str = "gpt-4",
-        system_prompt: Optional[str] = None,
-        provider: Optional[OpenAI] = None,
+            self,
+            model: str = "gpt-4",
+            system_prompt: str | None = None,
+            provider: OpenAI | None = None,
     ):
         """Initialize agent.
 
@@ -83,10 +129,10 @@ class Agent:
             self.toolkit_prefixes[prefixed_name] = prefix
 
     def add_tool(
-        self,
-        name: str,
-        function: Callable,
-        description: Optional[str] = None,
+            self,
+            name: str,
+            function: Callable,
+            description: str | None = None,
     ) -> Tool:
         """Add an independent tool (executed in parallel).
 
@@ -137,49 +183,9 @@ class Agent:
 
         return schemas
 
-    def _group_tool_calls_by_toolkit(
-        self, tool_calls: List[dict]
-    ) -> Dict[str, List[dict]]:
-        """Group tool calls by their toolkit.
-
-        Args:
-            tool_calls: List of tool call dicts from LLM
-
-        Returns:
-            Dict mapping toolkit identifier to list of calls
-            Special key "independent" for independent tools
-        """
-        groups = defaultdict(list)
-
-        for call in tool_calls:
-            tool_name = call["function"]["name"]
-
-            # Check if it's a prefixed tool
-            if "::" in tool_name:
-                prefix, base_name = tool_name.split("::", 1)
-                # Remove prefix for toolkit execution
-                groups[prefix].append(
-                    {
-                        "id": call["id"],
-                        "name": base_name,
-                        "arguments": json.loads(call["function"]["arguments"]),
-                    }
-                )
-            else:
-                # Independent tool
-                groups["independent"].append(
-                    {
-                        "id": call["id"],
-                        "name": tool_name,
-                        "arguments": json.loads(call["function"]["arguments"]),
-                    }
-                )
-
-        return dict(groups)
-
     def _execute_toolkit_group(
-        self, prefix: str, tool_calls: List[dict]
-    ) -> List[dict]:
+            self, prefix: str, tool_calls: List[dict]
+    ) -> List[ChatCompletionToolMessageParam]:
         """Execute a group of tool calls for a specific toolkit.
 
         Args:
@@ -196,11 +202,11 @@ class Agent:
         else:
             # Unknown toolkit
             return [
-                {
-                    "tool_call_id": call["id"],
-                    "role": "tool",
-                    "content": f"Error: Unknown toolkit '{prefix}'",
-                }
+                ChatCompletionToolMessageParam(
+                    tool_call_id=call["id"],
+                    role="tool",
+                    content=f"Error: Unknown toolkit '{prefix}'",
+                )
                 for call in tool_calls
             ]
 
@@ -216,19 +222,19 @@ class Agent:
             for call, result in zip(tool_calls, results):
                 if result["success"]:
                     formatted_results.append(
-                        {
-                            "tool_call_id": call["id"],
-                            "role": "tool",
-                            "content": str(result["result"]),
-                        }
+                        ChatCompletionToolMessageParam(
+                            tool_call_id=call["id"],
+                            role="tool",
+                            content=str(result["result"]),
+                        )
                     )
                 else:
                     formatted_results.append(
-                        {
-                            "tool_call_id": call["id"],
-                            "role": "tool",
-                            "content": f"Error: {result['error']}",
-                        }
+                        ChatCompletionToolMessageParam(
+                            tool_call_id=call["id"],
+                            role="tool",
+                            content=f"Error: {result['error']}",
+                        )
                     )
 
             return formatted_results
@@ -241,33 +247,32 @@ class Agent:
                     result = e.partial_results[idx]
                     if result["success"]:
                         formatted_results.append(
-                            {
-                                "tool_call_id": call["id"],
-                                "role": "tool",
-                                "content": str(result["result"]),
-                            }
+                            ChatCompletionToolMessageParam(
+                                tool_call_id=call["id"],
+                                role="tool",
+                                content=str(result["result"]),
+                            )
                         )
                     else:
                         formatted_results.append(
-                            {
-                                "tool_call_id": call["id"],
-                                "role": "tool",
-                                "content": f"Error: {result['error']}",
-                            }
+                            ChatCompletionToolMessageParam(
+                                tool_call_id=call["id"],
+                                role="tool",
+                                content=f"Error: {result['error']}",
+                            )
                         )
                 else:
-                    # This call didn't execute
                     formatted_results.append(
-                        {
-                            "tool_call_id": call["id"],
-                            "role": "tool",
-                            "content": f"Error: Pipeline failed before this tool executed",
-                        }
+                        ChatCompletionToolMessageParam(
+                            tool_call_id=call["id"],
+                            role="tool",
+                            content=f"Error: Pipeline failed before this tool executed",
+                        )
                     )
 
             return formatted_results
 
-    def _execute_tool_calls(self, tool_calls: List[Any]) -> List[dict]:
+    def _execute_tool_calls(self, tool_calls: List[Any]) -> List[ChatCompletionToolMessageParam]:
         """Execute tool calls with three-tier concurrency model.
 
         1. Independent tools run in parallel
@@ -281,7 +286,7 @@ class Agent:
             List of tool result messages
         """
         # Group by toolkit
-        groups = self._group_tool_calls_by_toolkit(tool_calls)
+        groups = _group_tool_calls_by_toolkit(tool_calls)
 
         # Execute toolkit groups in parallel
         all_results = []
@@ -305,10 +310,10 @@ class Agent:
         return all_results
 
     def run(
-        self,
-        user_message: str,
-        max_iterations: int = 10,
-        stream: bool = False,
+            self,
+            user_message: str,
+            max_iterations: int = 100,
+            stream: bool = False,
     ) -> str:
         """Run the agent conversation loop.
 
@@ -323,11 +328,19 @@ class Agent:
         # Add system message if not already present
         if not self.messages or self.messages[0].get("role") != "system":
             self.messages.insert(
-                0, {"role": "system", "content": self.system_prompt}
+                0, ChatCompletionSystemMessageParam(
+                    role="system",
+                    content=self.system_prompt
+                )
             )
 
         # Add user message
-        self.messages.append({"role": "user", "content": user_message})
+        self.messages.append(
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=user_message,
+            )
+        )
 
         for iteration in range(max_iterations):
             # Generate tool schemas based on current context
@@ -337,13 +350,16 @@ class Agent:
             response = self.provider.chat.completions.create(
                 model=self.model,
                 messages=self.messages,
-                tools=tools if tools else None,
+                tools=tools if tools else [],
             )
 
             message = response.choices[0].message
 
             # Add assistant message to history
-            self.messages.append(message)
+            self.messages.append(ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=message.content,
+            ))
 
             # Check if we're done
             if not message.tool_calls:

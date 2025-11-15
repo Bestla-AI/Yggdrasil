@@ -9,7 +9,7 @@ Example:
         ...
 """
 
-from typing import Any, Dict, List, Optional, Tuple, Union as TypingUnion
+from typing import Any, Dict, List, Tuple, Union as TypingUnion
 
 
 class DynamicType:
@@ -275,7 +275,7 @@ class DynamicFiltered:
     def __class_getitem__(cls, params: Tuple[str, str]) -> "DynamicFiltered":
         return cls(params)
 
-    def generate_schema(self, context: Any, filters: Optional[dict] = None) -> dict:
+    def generate_schema(self, context: Any, filters: dict | None = None) -> dict:
         """Generate schema with filtered values.
 
         Args:
@@ -496,7 +496,7 @@ def is_dynamic_type(annotation: Any) -> bool:
     )
 
 
-def generate_param_schema(annotation: Any, context: Any, filters: Optional[dict] = None) -> dict:
+def generate_param_schema(annotation: Any, context: Any, filters: dict | None = None) -> dict:
     """Generate JSON schema for a parameter based on its type annotation.
 
     Args:

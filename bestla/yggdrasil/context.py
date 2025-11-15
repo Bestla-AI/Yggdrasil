@@ -1,6 +1,6 @@
 """Context management for stateful toolkits."""
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict
 from copy import deepcopy
 import jsonschema
 from jsonschema import ValidationError

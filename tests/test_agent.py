@@ -81,7 +81,7 @@ class TestAgent:
             {"id": "4", "function": {"name": "add", "arguments": '{"a": 2, "b": 3}'}},
         ]
 
-        groups = agent._group_tool_calls_by_toolkit(tool_calls)
+        groups = _group_tool_calls_by_toolkit(tool_calls)
 
         assert "plane" in groups
         assert "github" in groups
