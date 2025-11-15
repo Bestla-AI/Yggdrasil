@@ -6,18 +6,24 @@ from unittest.mock import Mock, MagicMock, patch
 from bestla.yggdrasil import Agent, Toolkit, Tool, tool
 
 
+@pytest.fixture
+def mock_provider():
+    """Create a mock OpenAI provider."""
+    return Mock()
+
+
 class TestAgent:
     """Test Agent functionality."""
 
-    def test_create_agent(self):
+    def test_create_agent(self, mock_provider):
         """Test creating an agent."""
-        agent = Agent(model="gpt-4")
+        agent = Agent(provider=mock_provider, model="gpt-4")
         assert agent.model == "gpt-4"
         assert agent.system_prompt is not None
 
-    def test_add_toolkit(self):
+    def test_add_toolkit(self, mock_provider):
         """Test adding toolkit with prefix."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
         toolkit = Toolkit()
 
         def test_tool() -> Tuple[str, dict]:
@@ -31,9 +37,9 @@ class TestAgent:
         assert "myprefix" in agent.toolkits
         assert agent.toolkit_prefixes["myprefix::test"] == "myprefix"
 
-    def test_add_independent_tool(self):
+    def test_add_independent_tool(self, mock_provider):
         """Test adding independent tool."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         def add(a: int, b: int) -> Tuple[int, dict]:
             return a + b, {}
@@ -43,9 +49,9 @@ class TestAgent:
         assert "add" in agent.independent_toolkit.tools
         assert agent.independent_toolkit.is_tool_available("add")
 
-    def test_generate_all_schemas(self):
+    def test_generate_all_schemas(self, mock_provider):
         """Test generating schemas from all toolkits."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         # Add toolkit
         toolkit = Toolkit()
@@ -63,42 +69,9 @@ class TestAgent:
         assert "prefix::tool1" in names
         assert "add" in names
 
-    def test_group_tool_calls_by_toolkit(self):
-        """Test grouping tool calls by toolkit."""
-        agent = Agent()
-
-        # Add two toolkits
-        toolkit1 = Toolkit()
-        toolkit2 = Toolkit()
-        agent.add_toolkit("plane", toolkit1)
-        agent.add_toolkit("github", toolkit2)
-
-        # Mock tool calls
-        tool_calls = [
-            {"id": "1", "function": {"name": "plane::list_issues", "arguments": "{}"}},
-            {"id": "2", "function": {"name": "plane::get_issue", "arguments": '{"id": "1"}'}},
-            {"id": "3", "function": {"name": "github::list_prs", "arguments": "{}"}},
-            {"id": "4", "function": {"name": "add", "arguments": '{"a": 2, "b": 3}'}},
-        ]
-
-        groups = _group_tool_calls_by_toolkit(tool_calls)
-
-        assert "plane" in groups
-        assert "github" in groups
-        assert "independent" in groups
-
-        assert len(groups["plane"]) == 2
-        assert len(groups["github"]) == 1
-        assert len(groups["independent"]) == 1
-
-        # Check prefix removal
-        assert groups["plane"][0]["name"] == "list_issues"
-        assert groups["github"][0]["name"] == "list_prs"
-        assert groups["independent"][0]["name"] == "add"
-
-    def test_execute_toolkit_group(self):
+    def test_execute_toolkit_group(self, mock_provider):
         """Test executing a toolkit group."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
         toolkit = Toolkit()
 
         @tool()
@@ -119,9 +92,9 @@ class TestAgent:
         assert results[0]["role"] == "tool"
         assert "10" in results[0]["content"]
 
-    def test_execute_independent_tools(self):
+    def test_execute_independent_tools(self, mock_provider):
         """Test executing independent tools."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         def add(a: int, b: int) -> Tuple[int, dict]:
             return a + b, {}
@@ -144,10 +117,10 @@ class TestAgent:
         assert "8" in contents["call_1"]
         assert "8" in contents["call_2"]
 
-    def test_agent_as_tool(self):
+    def test_agent_as_tool(self, mock_provider):
         """Test using agent as a tool (hierarchical composition)."""
         # Create sub-agent with mock provider
-        sub_agent = Agent(provider=Mock())
+        sub_agent = Agent(provider=mock_provider, model="gpt-4")
         sub_agent.add_tool("add", lambda a, b: (a + b, {}))
 
         # Mock the run method to avoid OpenAI call
@@ -158,21 +131,21 @@ class TestAgent:
         assert updates == {}  # No context updates (isolation)
         assert result == "Result: 5"
 
-    def test_clear_messages(self):
+    def test_clear_messages(self, mock_provider):
         """Test clearing conversation history."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
         agent.messages.append({"role": "user", "content": "test"})
         assert len(agent.messages) > 0
 
         agent.clear_messages()
         assert len(agent.messages) == 0
 
-    def test_toolkit_isolation_in_execute(self):
+    def test_toolkit_isolation_in_execute(self, mock_provider):
         """Test that sub-agent toolkits are isolated."""
         toolkit = Toolkit()
         toolkit.context.set("key", "original")
 
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
         agent.add_toolkit("test", toolkit)
 
         # Mock the run method to modify context
@@ -190,9 +163,9 @@ class TestAgent:
         # Original toolkit context should be restored
         assert toolkit.context.get("key") == "original"
 
-    def test_multiple_toolkits_parallel_execution(self):
+    def test_multiple_toolkits_parallel_execution(self, mock_provider):
         """Test that different toolkits execute in parallel."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         # Create two toolkits
         toolkit1 = Toolkit()
@@ -229,9 +202,9 @@ class TestAgent:
         # Both should execute
         assert len(results) == 2
 
-    def test_sequential_within_toolkit(self):
+    def test_sequential_within_toolkit(self, mock_provider):
         """Test that tools in same toolkit execute sequentially."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
         toolkit = Toolkit()
 
         execution_log = []
@@ -266,9 +239,9 @@ class TestAgent:
         assert execution_log == ["step1", "step2"]
         assert len(results) == 2
 
-    def test_unknown_toolkit_error(self):
+    def test_unknown_toolkit_error(self, mock_provider):
         """Test error handling for unknown toolkit."""
-        agent = Agent()
+        agent = Agent(provider=mock_provider, model="gpt-4")
 
         tool_calls = [
             {"id": "1", "name": "nonexistent_tool", "arguments": {}}

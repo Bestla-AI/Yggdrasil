@@ -72,16 +72,16 @@ class Agent:
 
     def __init__(
             self,
-            model: str = "gpt-4",
+            provider: OpenAI,
+            model: str,
             system_prompt: str | None = None,
-            provider: OpenAI | None = None,
     ):
         """Initialize agent.
 
         Args:
-            model: OpenAI model name
+            provider: OpenAI client instance
+            model: model name
             system_prompt: System prompt for the agent
-            provider: OpenAI client instance (optional, created on first use if not provided)
         """
         self.model = model
         self.system_prompt = system_prompt or "You are a helpful assistant."
@@ -100,9 +100,7 @@ class Agent:
 
     @property
     def provider(self) -> OpenAI:
-        """Get or create OpenAI provider."""
-        if self._provider is None:
-            self._provider = OpenAI()
+        """Get OpenAI provider."""
         return self._provider
 
     @provider.setter
