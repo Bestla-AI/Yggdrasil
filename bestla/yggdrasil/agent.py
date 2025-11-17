@@ -19,6 +19,39 @@ from bestla.yggdrasil.tool import Tool
 from bestla.yggdrasil.toolkit import Toolkit
 
 
+class ExecutionContext:
+    """Holds execution-specific state for thread-safe agent execution.
+
+    This context is created per execution to ensure isolation when agents
+    are used as tools and run in parallel. All toolkits are copied using
+    their custom copy() method to prevent state conflicts during simultaneous
+    executions.
+
+    Attributes:
+        toolkits: Dict mapping prefix to copied Toolkit instances
+        independent_toolkit: Copied Toolkit for independent tools (no prefix)
+    """
+
+    def __init__(
+        self,
+        toolkits: Dict[str, Toolkit],
+        independent_toolkit: Toolkit,
+    ):
+        """Initialize execution context with copies of toolkits.
+
+        Args:
+            toolkits: Dict mapping prefix to Toolkit instance
+            independent_toolkit: Toolkit for independent tools
+        """
+        # Copy all toolkits using their custom copy() method
+        # This ensures proper handling of tools, filters, and context
+        self.toolkits = {
+            prefix: toolkit.copy()
+            for prefix, toolkit in toolkits.items()
+        }
+        self.independent_toolkit = independent_toolkit.copy()
+
+
 def _group_tool_calls_by_toolkit(
         tool_calls: List[dict]
 ) -> Dict[str, List[dict]]:
@@ -160,8 +193,11 @@ class Agent:
         self.independent_toolkit.register_tool(tool)
         self.independent_toolkit.available_tools.add(tool.name)
 
-    def _generate_all_schemas(self) -> List[dict]:
+    def _generate_all_schemas(self, context: ExecutionContext) -> List[dict]:
         """Generate schemas for all available tools from all toolkits.
+
+        Args:
+            context: Execution context containing toolkits
 
         Returns:
             List of OpenAI tool schemas with prefixed names
@@ -169,7 +205,7 @@ class Agent:
         schemas = []
 
         # Get schemas from all toolkits (with prefixes)
-        for prefix, toolkit in self.toolkits.items():
+        for prefix, toolkit in context.toolkits.items():
             toolkit_schemas = toolkit.generate_schemas()
             # Add prefix to tool names
             for schema in toolkit_schemas:
@@ -177,17 +213,18 @@ class Agent:
                 schemas.append(schema)
 
         # Get schemas from independent tools (no prefix)
-        independent_schemas = self.independent_toolkit.generate_schemas()
+        independent_schemas = context.independent_toolkit.generate_schemas()
         schemas.extend(independent_schemas)
 
         return schemas
 
     def _execute_toolkit_group(
-            self, prefix: str, tool_calls: List[dict]
+            self, context: ExecutionContext, prefix: str, tool_calls: List[dict]
     ) -> List[ChatCompletionToolMessageParam]:
         """Execute a group of tool calls for a specific toolkit.
 
         Args:
+            context: Execution context containing isolated toolkit copies
             prefix: Toolkit prefix (or "independent")
             tool_calls: List of tool calls for this toolkit
 
@@ -195,9 +232,9 @@ class Agent:
             List of results with tool_call_id, content, and error info
         """
         if prefix == "independent":
-            toolkit = self.independent_toolkit
-        elif prefix in self.toolkits:
-            toolkit = self.toolkits[prefix]
+            toolkit = context.independent_toolkit
+        elif prefix in context.toolkits:
+            toolkit = context.toolkits[prefix]
         else:
             # Unknown toolkit
             return [
@@ -271,7 +308,9 @@ class Agent:
 
             return formatted_results
 
-    def _execute_tool_calls(self, tool_calls: List[Any]) -> List[ChatCompletionToolMessageParam]:
+    def _execute_tool_calls(
+            self, context: ExecutionContext, tool_calls: List[Any]
+    ) -> List[ChatCompletionToolMessageParam]:
         """Execute tool calls with three-tier concurrency model.
 
         1. Independent tools run in parallel
@@ -279,6 +318,7 @@ class Agent:
         3. Different toolkits run in parallel to each other
 
         Args:
+            context: Execution context containing isolated toolkit copies
             tool_calls: List of tool call objects from LLM response
 
         Returns:
@@ -293,12 +333,12 @@ class Agent:
         if len(groups) == 1:
             # Only one group, execute directly (no parallelism needed)
             prefix, calls = next(iter(groups.items()))
-            all_results = self._execute_toolkit_group(prefix, calls)
+            all_results = self._execute_toolkit_group(context, prefix, calls)
         else:
             # Multiple groups, execute in parallel
             with ThreadPoolExecutor() as executor:
                 futures = {
-                    executor.submit(self._execute_toolkit_group, prefix, calls): prefix
+                    executor.submit(self._execute_toolkit_group, context, prefix, calls): prefix
                     for prefix, calls in groups.items()
                 }
 
@@ -324,6 +364,12 @@ class Agent:
         Returns:
             Final agent response
         """
+        # Create execution context with deep copies for state isolation
+        context = ExecutionContext(
+            toolkits=self.toolkits,
+            independent_toolkit=self.independent_toolkit,
+        )
+
         # Add system message if not already present
         if not self.messages or self.messages[0].get("role") != "system":
             self.messages.insert(
@@ -343,7 +389,7 @@ class Agent:
 
         for iteration in range(max_iterations):
             # Generate tool schemas based on current context
-            tools = self._generate_all_schemas()
+            tools = self._generate_all_schemas(context)
 
             # Call LLM
             response = self.provider.chat.completions.create(
@@ -366,7 +412,7 @@ class Agent:
                 return message.content or ""
 
             # Execute tool calls
-            tool_results = self._execute_tool_calls(message.tool_calls)
+            tool_results = self._execute_tool_calls(context, message.tool_calls)
 
             # Add tool results to messages
             self.messages.extend(tool_results)
@@ -380,7 +426,7 @@ class Agent:
         """Execute agent as a tool (for hierarchical composition).
 
         This allows agents to be called by other agents.
-        Sub-agent gets a deep copy of toolkits (isolation).
+        State isolation is handled by ExecutionContext (deep copies).
 
         Args:
             query: Input query
@@ -389,26 +435,11 @@ class Agent:
             Tuple of (response_string, empty_dict)
             Context updates are always empty (organizational model)
         """
-        # Deep copy toolkits for isolation
-        original_toolkits = self.toolkits.copy()
-        self.toolkits = {
-            prefix: toolkit.copy() for prefix, toolkit in self.toolkits.items()
-        }
+        # Run agent loop - ExecutionContext handles state isolation
+        response = self.run(query)
 
-        try:
-            # Run agent loop
-            response = self.run(query)
-
-            # Restore original toolkits
-            self.toolkits = original_toolkits
-
-            # Return response with no context updates (isolation)
-            return response, {}
-
-        except Exception as e:
-            # Restore toolkits on error
-            self.toolkits = original_toolkits
-            raise e
+        # Return response with no context updates (isolation)
+        return response, {}
 
     def clear_messages(self) -> None:
         """Clear conversation history."""
