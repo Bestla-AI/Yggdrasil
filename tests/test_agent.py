@@ -163,7 +163,6 @@ class TestAgent:
         agent.add_toolkit("test", toolkit)
 
         # Mock the run method to modify context
-        original_run = agent.run
         def mock_run(query):
             # Create a context (simulating what real run does)
             context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
@@ -322,7 +321,6 @@ class TestAgent:
         agent.add_toolkit("test", toolkit)
 
         # Mock run to test state isolation
-        original_run = agent.run
 
         def mock_run_with_state(query, execution_id):
             """Mock run that tracks state changes."""
@@ -337,7 +335,10 @@ class TestAgent:
 
             # Store the state we saw
             with state_lock:
-                execution_states[execution_id] = context.toolkits["test"].context.get("execution_id")
+                execution_states[execution_id] = (
+                    context.toolkits["test"]
+                    .context.get("execution_id")
+                )
 
             return f"Result for {execution_id}"
 
@@ -497,7 +498,6 @@ class TestAgent:
 
     def test_toolkit_pipeline_error_handling(self, mock_provider):
         """Test handling of ToolkitPipelineError with partial results."""
-        from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
         agent = Agent(provider=mock_provider, model="gpt-4")
         toolkit = Toolkit()
@@ -608,7 +608,7 @@ class TestAgent:
         agent.clear_messages()
 
         # Run
-        result = agent.run("Test query")
+        agent.run("Test query")
 
         # Check messages
         assert len(agent.messages) >= 2
@@ -631,7 +631,6 @@ class TestAgent:
 
         # First run
         agent.run("First query")
-        first_message_count = len(agent.messages)
 
         # Second run
         agent.run("Second query")

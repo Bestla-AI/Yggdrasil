@@ -1,11 +1,10 @@
 """Context management for stateful toolkits."""
 
-from copy import deepcopy
 from typing import Any, Dict
 
 import jsonschema
-from jsonschema import ValidationError
 from immutables import Map
+from jsonschema import ValidationError
 
 from bestla.yggdrasil.exceptions import ContextValidationError
 
