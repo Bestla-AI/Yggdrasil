@@ -364,21 +364,26 @@ class Toolkit:
         return results
 
     def copy(self) -> "Toolkit":
-        """Create a deep copy of this toolkit for sub-agent isolation.
+        """Create an isolated copy of this toolkit for sub-agent execution.
+
+        With immutable context data structures, this is now highly efficient:
+        - Context copy is O(1) (reference to immutable Map)
+        - Tool/filter dicts are shallow copied (tools are immutable)
+        - Available/locked tool sets are shallow copied
 
         Returns:
-            New Toolkit instance with copied context and tools
+            New Toolkit instance with isolated context and copied state
         """
         # Create new toolkit
         new_toolkit = Toolkit(validation_enabled=self.context.validation_enabled)
 
-        # Deep copy context
+        # Copy context (O(1) with immutable Map!)
         new_toolkit.context = self.context.copy()
 
         # Copy tools (tools are immutable, so shallow copy is fine)
         new_toolkit.tools = self.tools.copy()
 
-        # Copy availability state
+        # Copy availability state (shallow copy of sets)
         new_toolkit.available_tools = self.available_tools.copy()
         new_toolkit.locked_tools = self.locked_tools.copy()
 

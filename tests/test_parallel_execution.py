@@ -7,6 +7,7 @@ from unittest.mock import Mock
 import pytest
 
 from bestla.yggdrasil import Agent, Toolkit, tool
+from bestla.yggdrasil.agent import ExecutionContext
 
 
 @pytest.fixture
@@ -54,7 +55,12 @@ class TestParallelExecution:
             {"id": "3", "function": {"name": "slow3", "arguments": "{}"}},
         ]
 
-        results = agent._execute_tool_calls(tool_calls)
+        # Create execution context
+        context = ExecutionContext(
+            toolkits=agent.toolkits,
+            independent_toolkit=agent.independent_toolkit
+        )
+        results = agent._execute_tool_calls(context, tool_calls)
         end_time = time.time()
 
         # If parallel: ~0.1s, if sequential: ~0.3s
@@ -125,20 +131,26 @@ class TestParallelExecution:
             {"id": "3", "function": {"name": "tool3", "arguments": "{}"}},
         ]
 
-        results = agent._execute_tool_calls(tool_calls)
+        # Create execution context
+        context = ExecutionContext(
+            toolkits=agent.toolkits,
+            independent_toolkit=agent.independent_toolkit
+        )
+        results = agent._execute_tool_calls(context, tool_calls)
 
         # All should succeed
         assert len(results) == 3
 
         # Context should have all unique keys
-        context = agent.independent_toolkit.context
-        assert context.has("key1")
-        assert context.has("key2")
-        assert context.has("key3")
+        # Note: we check the execution context's independent_toolkit, not the agent's
+        exec_context = context.independent_toolkit.context
+        assert exec_context.has("key1")
+        assert exec_context.has("key2")
+        assert exec_context.has("key3")
 
         # Shared key should have one of the values (last-write-wins)
-        assert context.has("shared")
-        assert context.get("shared") in ["from_tool1", "from_tool2"]
+        assert exec_context.has("shared")
+        assert exec_context.get("shared") in ["from_tool1", "from_tool2"]
 
     def test_parallel_tool_failure_doesnt_stop_others(self, mock_provider):
         """Test that failure of one parallel tool doesn't stop others."""
@@ -169,7 +181,12 @@ class TestParallelExecution:
             {"id": "3", "function": {"name": "success2", "arguments": "{}"}},
         ]
 
-        results = agent._execute_tool_calls(tool_calls)
+        # Create execution context
+        context = ExecutionContext(
+            toolkits=agent.toolkits,
+            independent_toolkit=agent.independent_toolkit
+        )
+        results = agent._execute_tool_calls(context, tool_calls)
 
         # All three should have executed (failure doesn't stop others)
         assert set(executed) == {"tool1", "failing", "tool2"}
@@ -229,7 +246,12 @@ class TestParallelExecution:
             {"id": "3", "function": {"name": "ind", "arguments": "{}"}},
         ]
 
-        results = agent._execute_tool_calls(tool_calls)
+        # Create execution context
+        context = ExecutionContext(
+            toolkits=agent.toolkits,
+            independent_toolkit=agent.independent_toolkit
+        )
+        results = agent._execute_tool_calls(context, tool_calls)
         end_time = time.time()
 
         # Toolkit tools should be sequential: tk1_start, tk1_end, tk2_start, tk2_end
