@@ -36,7 +36,6 @@ class TestAgent:
             return "result", {}
 
         toolkit.add_tool("test", test_tool)
-        toolkit.set_available_tools({"test"})
 
         agent.add_toolkit("myprefix", toolkit)
 
@@ -62,7 +61,6 @@ class TestAgent:
         # Add toolkit
         toolkit = Toolkit()
         toolkit.add_tool("tool1", lambda: ("r", {}))
-        toolkit.set_available_tools({"tool1"})
         agent.add_toolkit("prefix", toolkit)
 
         # Add independent tool
@@ -87,7 +85,6 @@ class TestAgent:
             return x * 2, {}
 
         toolkit.register_tool(test_tool)
-        toolkit.set_available_tools({"test_tool"})
         agent.add_toolkit("test", toolkit)
 
         # Create execution context
@@ -200,8 +197,6 @@ class TestAgent:
 
         toolkit1.register_tool(tool1)
         toolkit2.register_tool(tool2)
-        toolkit1.set_available_tools({"tool1"})
-        toolkit2.set_available_tools({"tool2"})
 
         agent.add_toolkit("tk1", toolkit1)
         agent.add_toolkit("tk2", toolkit2)
@@ -227,12 +222,12 @@ class TestAgent:
 
         execution_log = []
 
-        @tool(provides=["step1"], unlocks=["step2"])
+        @tool(enables_states=["step2_enabled"])
         def step1() -> Tuple[str, dict]:
             execution_log.append("step1")
             return "step1", {"step1": True}
 
-        @tool(requires=["step1"])
+        @tool(required_context=["step1"], required_states=["step2_enabled"])
         def step2() -> Tuple[str, dict]:
             execution_log.append("step2")
             # This should only run after step1
@@ -241,7 +236,6 @@ class TestAgent:
 
         toolkit.register_tool(step1)
         toolkit.register_tool(step2)
-        toolkit.set_available_tools({"step1"})
 
         agent.add_toolkit("test", toolkit)
 
@@ -317,7 +311,6 @@ class TestAgent:
             return f"Set {execution_id}={value}", {"execution_id": execution_id, "value": value}
 
         toolkit.register_tool(set_value)
-        toolkit.set_available_tools({"set_value"})
         agent.add_toolkit("test", toolkit)
 
         # Mock run to test state isolation
@@ -503,17 +496,16 @@ class TestAgent:
         toolkit = Toolkit()
 
         # Create tools where second one fails
-        @tool(provides=["step1"], unlocks=["step2"])
+        @tool(enables_states=["step2_enabled"])
         def step1() -> Tuple[str, dict]:
             return "success", {"step1": True}
 
-        @tool(requires=["step1"], provides=["step2"])
+        @tool(required_context=["step1"], required_states=["step2_enabled"])
         def step2_fail() -> Tuple[str, dict]:
             raise ValueError("Intentional failure")
 
         toolkit.register_tool(step1)
         toolkit.register_tool(step2_fail)
-        toolkit.set_available_tools({"step1"})
         agent.add_toolkit("test", toolkit)
 
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
@@ -669,7 +661,6 @@ class TestAgent:
             return x * 2, {}
 
         toolkit.register_tool(single_tool)
-        toolkit.set_available_tools({"single_tool"})
         agent.add_toolkit("test", toolkit)
 
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
@@ -729,7 +720,6 @@ class TestAgent:
             return x + 1, {}
 
         toolkit.register_tool(toolkit_tool)
-        toolkit.set_available_tools({"toolkit_tool"})
         agent.add_toolkit("tk", toolkit)
 
         # Add independent tool

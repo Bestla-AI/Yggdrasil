@@ -25,15 +25,14 @@ class TestTool:
 
         t = Tool(
             function=select_project,
-            requires_context=["auth_token"],
-            provides_context=["selected_project"],
-            unlocks=["list_issues"],
-            locks=[]
+            required_context=["auth_token"],
+            enables_states=["project_selected"],
+            disables_states=["project_browsing"]
         )
 
-        assert t.requires_context == ["auth_token"]
-        assert t.provides_context == ["selected_project"]
-        assert t.unlocks == ["list_issues"]
+        assert t.required_context == ["auth_token"]
+        assert t.enables_states == ["project_selected"]
+        assert t.disables_states == ["project_browsing"]
 
     def test_execute_tool(self):
         """Test executing a tool."""
@@ -64,7 +63,7 @@ class TestTool:
 
         t = Tool(
             function=protected_action,
-            requires_context=["auth_token", "user_id"]
+            required_context=["auth_token", "user_id"]
         )
 
         context = Context()
@@ -116,9 +115,8 @@ class TestTool:
     def test_tool_decorator(self):
         """Test @tool decorator."""
         @tool(
-            requires=["selected_project"],
-            provides=["issue_names"],
-            unlocks=["get_issue"]
+            required_context=["selected_project"],
+            enables_states=["issues_loaded"]
         )
         def list_issues() -> Tuple[str, dict]:
             """List issues in project."""
@@ -126,9 +124,8 @@ class TestTool:
 
         assert isinstance(list_issues, Tool)
         assert list_issues.name == "list_issues"
-        assert list_issues.requires_context == ["selected_project"]
-        assert list_issues.provides_context == ["issue_names"]
-        assert list_issues.unlocks == ["get_issue"]
+        assert list_issues.required_context == ["selected_project"]
+        assert list_issues.enables_states == ["issues_loaded"]
 
     def test_tool_with_optional_params(self):
         """Test tool with optional parameters."""

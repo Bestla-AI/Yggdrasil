@@ -95,7 +95,6 @@ class TestParallelExecution:
 
         toolkit.register_tool(step1)
         toolkit.register_tool(step2)
-        toolkit.set_available_tools({"step1", "step2"})
 
         # Execute sequentially
         results = toolkit.execute_sequential([
@@ -226,7 +225,6 @@ class TestParallelExecution:
 
         toolkit.register_tool(toolkit_tool1)
         toolkit.register_tool(toolkit_tool2)
-        toolkit.set_available_tools({"toolkit_tool1", "toolkit_tool2"})
 
         agent.add_toolkit("mykit", toolkit)
 

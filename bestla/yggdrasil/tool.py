@@ -10,7 +10,7 @@ class Tool:
     """Wraps a Python function with metadata for agent use.
 
     Tools always return (result, context_updates) tuples.
-    Tools can declare context dependencies, unlock/lock other tools,
+    Tools can declare context dependencies, state requirements,
     and use dynamic types for context-driven schemas.
     """
 
@@ -19,10 +19,11 @@ class Tool:
         function: Callable,
         name: str | None = None,
         description: str | None = None,
-        requires_context: List[str] | None = None,
-        provides_context: List[str] | None = None,
-        unlocks: List[str] | None = None,
-        locks: List[str] | None = None,
+        required_context: List[str] | None = None,
+        required_states: List[str] | None = None,
+        forbidden_states: List[str] | None = None,
+        enables_states: List[str] | None = None,
+        disables_states: List[str] | None = None,
     ):
         """Initialize a tool.
 
@@ -30,20 +31,22 @@ class Tool:
             function: Python function to wrap
             name: Tool name (defaults to function name)
             description: Tool description (defaults to function docstring)
-            requires_context: List of context keys this tool requires
-            provides_context: List of context keys this tool provides
-            unlocks: List of tool names to unlock after execution
-            locks: List of tool names to lock after execution
+            required_context: List of context keys that must exist
+            required_states: List of states that must be enabled
+            forbidden_states: List of states that must NOT be enabled
+            enables_states: List of states to enable after execution
+            disables_states: List of states to disable after execution
         """
         self.function = function
         self.name = name or function.__name__
         self.description = description or (inspect.getdoc(function) or "")
 
         # Metadata
-        self.requires_context = requires_context or []
-        self.provides_context = provides_context or []
-        self.unlocks = unlocks or []
-        self.locks = locks or []
+        self.required_context = required_context or []
+        self.required_states = required_states or []
+        self.forbidden_states = forbidden_states or []
+        self.enables_states = enables_states or []
+        self.disables_states = disables_states or []
 
         # Extract function signature
         self.signature = inspect.signature(function)
@@ -123,28 +126,30 @@ class Tool:
         Returns:
             Tuple of (all_present, missing_keys)
         """
-        missing = [key for key in self.requires_context if not context.has(key)]
+        missing = [key for key in self.required_context if not context.has(key)]
         return len(missing) == 0, missing
 
     def __repr__(self) -> str:
-        return f"Tool(name='{self.name}', requires={self.requires_context})"
+        return f"Tool(name='{self.name}', required_context={self.required_context}, required_states={self.required_states})"
 
 
 def tool(
-    requires: List[str] | None = None,
-    provides: List[str] | None = None,
-    unlocks: List[str] | None = None,
-    locks: List[str] | None = None,
+    required_context: List[str] | None = None,
+    required_states: List[str] | None = None,
+    forbidden_states: List[str] | None = None,
+    enables_states: List[str] | None = None,
+    disables_states: List[str] | None = None,
     name: str | None = None,
     description: str | None = None,
 ):
     """Decorator to create a Tool from a function.
 
     Args:
-        requires: List of context keys this tool requires
-        provides: List of context keys this tool provides
-        unlocks: List of tool names to unlock after execution
-        locks: List of tool names to lock after execution
+        required_context: List of context keys that must exist
+        required_states: List of states that must be enabled
+        forbidden_states: List of states that must NOT be enabled
+        enables_states: List of states to enable after execution
+        disables_states: List of states to disable after execution
         name: Optional tool name (defaults to function name)
         description: Optional tool description (defaults to docstring)
 
@@ -152,10 +157,9 @@ def tool(
         Decorator function
 
     Example:
-        @tool(requires=["selected_project"], provides=["issue_names"], unlocks=["get_issue"])
-        def list_issues() -> Tuple[str, dict]:
-            issues = fetch_issues()
-            return "Found issues", {"issue_names": [i["name"] for i in issues]}
+        @tool(required_states=["authenticated"], enables_states=["project_selected"])
+        def select_project(project_id: str) -> Tuple[str, dict]:
+            return "Selected", {"project_id": project_id}
     """
 
     def decorator(func: Callable) -> Tool:
@@ -163,10 +167,11 @@ def tool(
             function=func,
             name=name,
             description=description,
-            requires_context=requires,
-            provides_context=provides,
-            unlocks=unlocks,
-            locks=locks,
+            required_context=required_context,
+            required_states=required_states,
+            forbidden_states=forbidden_states,
+            enables_states=enables_states,
+            disables_states=disables_states,
         )
 
     return decorator

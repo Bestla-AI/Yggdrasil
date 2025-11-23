@@ -11,11 +11,11 @@ from bestla.yggdrasil.tool import Tool
 
 
 class Toolkit:
-    """Manages collection of related tools with shared context and FSM logic.
+    """Manages collection of related tools with shared context and state-based FSM logic.
 
     Toolkits:
     - Own a Context instance for domain state
-    - Manage tool availability via FSM (unlocks/locks)
+    - Manage tool availability via state-based FSM (enabled/disabled states)
     - Execute tools sequentially with immediate context updates
     - Generate dynamic schemas based on current context
     - Support custom filters for DynamicFiltered types
@@ -29,8 +29,7 @@ class Toolkit:
         """
         self.context = Context(validation_enabled=validation_enabled)
         self.tools: Dict[str, Tool] = {}
-        self.available_tools: Set[str] = set()
-        self.locked_tools: Set[str] = set()
+        self.unlocked_states: Set[str] = set()
         self.filters: Dict[str, Callable] = {}
 
         # Register builtin filters
@@ -59,10 +58,11 @@ class Toolkit:
         self,
         name: str,
         function: Callable,
-        requires_context: List[str] | None = None,
-        provides_context: List[str] | None = None,
-        unlocks: List[str] | None = None,
-        locks: List[str] | None = None,
+        required_context: List[str] | None = None,
+        required_states: List[str] | None = None,
+        forbidden_states: List[str] | None = None,
+        enables_states: List[str] | None = None,
+        disables_states: List[str] | None = None,
         description: str | None = None,
     ) -> Tool:
         """Add a tool to this toolkit.
@@ -70,10 +70,11 @@ class Toolkit:
         Args:
             name: Tool name
             function: Python function to wrap
-            requires_context: Context keys required
-            provides_context: Context keys provided
-            unlocks: Tools to unlock after execution
-            locks: Tools to lock after execution
+            required_context: Context keys required
+            required_states: States that must be enabled
+            forbidden_states: States that must NOT be enabled
+            enables_states: States to enable after execution
+            disables_states: States to disable after execution
             description: Tool description
 
         Returns:
@@ -83,10 +84,11 @@ class Toolkit:
             function=function,
             name=name,
             description=description,
-            requires_context=requires_context,
-            provides_context=provides_context,
-            unlocks=unlocks,
-            locks=locks,
+            required_context=required_context,
+            required_states=required_states,
+            forbidden_states=forbidden_states,
+            enables_states=enables_states,
+            disables_states=disables_states,
         )
         self.tools[name] = tool
         return tool
@@ -108,21 +110,21 @@ class Toolkit:
         """
         self.filters[name] = filter_func
 
-    def set_available_tools(self, tool_names: Set[str]) -> None:
-        """Set which tools are initially available.
+    def set_unlocked_states(self, state_names: Set[str]) -> None:
+        """Set which states are initially unlocked.
 
         Args:
-            tool_names: Set of tool names to make available
+            state_names: Set of state names to unlock
         """
-        self.available_tools = tool_names.copy()
+        self.unlocked_states = state_names.copy()
 
     def is_tool_available(self, tool_name: str) -> bool:
         """Check if a tool is currently available.
 
         A tool is available if:
-        1. It's in the available_tools set
-        2. It's not in the locked_tools set
-        3. Its context requirements are met
+        1. All required_states are unlocked
+        2. None of forbidden_states are unlocked
+        3. All context requirements are met
 
         Args:
             tool_name: Name of tool to check
@@ -133,16 +135,17 @@ class Toolkit:
         if tool_name not in self.tools:
             return False
 
-        # Check if locked
-        if tool_name in self.locked_tools:
+        tool = self.tools[tool_name]
+
+        # Check required states
+        if not all(state in self.unlocked_states for state in tool.required_states):
             return False
 
-        # Check if in available set
-        if tool_name not in self.available_tools:
+        # Check forbidden states
+        if any(state in self.unlocked_states for state in tool.forbidden_states):
             return False
 
         # Check context requirements
-        tool = self.tools[tool_name]
         all_present, _ = tool.check_context_requirements(self.context)
         return all_present
 
@@ -158,13 +161,19 @@ class Toolkit:
         if tool_name not in self.tools:
             return "Tool does not exist"
 
-        if tool_name in self.locked_tools:
-            return "Tool is locked"
-
-        if tool_name not in self.available_tools:
-            return "Tool not in available set"
-
         tool = self.tools[tool_name]
+
+        # Check required states
+        missing_states = [s for s in tool.required_states if s not in self.unlocked_states]
+        if missing_states:
+            return f"Missing required states: {', '.join(missing_states)}"
+
+        # Check forbidden states
+        present_forbidden = [s for s in tool.forbidden_states if s in self.unlocked_states]
+        if present_forbidden:
+            return f"Forbidden states are enabled: {', '.join(present_forbidden)}"
+
+        # Check context requirements
         all_present, missing = tool.check_context_requirements(self.context)
         if not all_present:
             return f"Missing required context: {', '.join(missing)}"
@@ -246,19 +255,15 @@ class Toolkit:
                 if context_updates:
                     self.context.update(context_updates)
 
-                # Update FSM: process unlocks
-                if tool.unlocks:
-                    for unlock_name in tool.unlocks:
-                        self.available_tools.add(unlock_name)
-                        # Remove from locked set if present
-                        self.locked_tools.discard(unlock_name)
+                # Update FSM: process enables_states
+                if tool.enables_states:
+                    for state_name in tool.enables_states:
+                        self.unlocked_states.add(state_name)
 
-                # Update FSM: process locks
-                if tool.locks:
-                    for lock_name in tool.locks:
-                        self.locked_tools.add(lock_name)
-                        # Optionally remove from available set
-                        # (locked tools are checked separately in is_tool_available)
+                # Update FSM: process disables_states
+                if tool.disables_states:
+                    for state_name in tool.disables_states:
+                        self.unlocked_states.discard(state_name)
 
                 # Store success result
                 success_result = {
@@ -369,7 +374,7 @@ class Toolkit:
         With immutable context data structures, this is now highly efficient:
         - Context copy is O(1) (reference to immutable Map)
         - Tool/filter dicts are shallow copied (tools are immutable)
-        - Available/locked tool sets are shallow copied
+        - Unlocked states set is shallow copied
 
         Returns:
             New Toolkit instance with isolated context and copied state
@@ -383,9 +388,8 @@ class Toolkit:
         # Copy tools (tools are immutable, so shallow copy is fine)
         new_toolkit.tools = self.tools.copy()
 
-        # Copy availability state (shallow copy of sets)
-        new_toolkit.available_tools = self.available_tools.copy()
-        new_toolkit.locked_tools = self.locked_tools.copy()
+        # Copy state (shallow copy of set)
+        new_toolkit.unlocked_states = self.unlocked_states.copy()
 
         # Copy filters
         new_toolkit.filters = self.filters.copy()
@@ -395,6 +399,6 @@ class Toolkit:
     def __repr__(self) -> str:
         return (
             f"Toolkit(tools={len(self.tools)}, "
-            f"available={len(self.available_tools)}, "
+            f"unlocked_states={len(self.unlocked_states)}, "
             f"context_keys={len(self.context.to_dict())})"
         )

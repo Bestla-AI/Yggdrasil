@@ -41,8 +41,8 @@ class TestToolkit:
         toolkit.register_tool(my_tool)
         assert "my_tool" in toolkit.tools
 
-    def test_set_available_tools(self):
-        """Test setting initially available tools."""
+    def test_set_unlocked_states(self):
+        """Test setting initially unlocked states."""
         toolkit = Toolkit()
 
         def tool1() -> Tuple[str, dict]:
@@ -51,9 +51,9 @@ class TestToolkit:
         def tool2() -> Tuple[str, dict]:
             return "2", {}
 
-        toolkit.add_tool("tool1", tool1)
-        toolkit.add_tool("tool2", tool2)
-        toolkit.set_available_tools({"tool1"})
+        toolkit.add_tool("tool1", tool1, required_states=["state1"])
+        toolkit.add_tool("tool2", tool2, required_states=["state2"])
+        toolkit.set_unlocked_states({"state1"})
 
         assert toolkit.is_tool_available("tool1")
         assert not toolkit.is_tool_available("tool2")
@@ -68,34 +68,32 @@ class TestToolkit:
         toolkit.add_tool(
             "protected",
             protected_tool,
-            requires_context=["auth_token"]
+            required_context=["auth_token"]
         )
-        toolkit.set_available_tools({"protected"})
 
-        # Not available without context
+        # Not available without context (no state requirements, but context missing)
         assert not toolkit.is_tool_available("protected")
 
         # Available with context
         toolkit.context.set("auth_token", "token123")
         assert toolkit.is_tool_available("protected")
 
-    def test_unlock_mechanism(self):
-        """Test unlocking tools."""
+    def test_enable_states_mechanism(self):
+        """Test enabling states makes tools available."""
         toolkit = Toolkit()
 
-        @tool(unlocks=["action2"])
+        @tool(enables_states=["state2"])
         def action1() -> Tuple[str, dict]:
             return "action1 done", {}
 
-        @tool()
+        @tool(required_states=["state2"])
         def action2() -> Tuple[str, dict]:
             return "action2 done", {}
 
         toolkit.register_tool(action1)
         toolkit.register_tool(action2)
-        toolkit.set_available_tools({"action1"})
 
-        # Initially action2 not available
+        # Initially action1 available (no requirements), action2 not available (state2 not enabled)
         assert toolkit.is_tool_available("action1")
         assert not toolkit.is_tool_available("action2")
 
@@ -104,50 +102,49 @@ class TestToolkit:
             {"name": "action1", "arguments": {}}
         ])
 
-        # Now action2 should be unlocked
+        # Now action2 should be available (state2 enabled)
         assert toolkit.is_tool_available("action2")
 
-    def test_lock_mechanism(self):
-        """Test locking tools."""
+    def test_disable_states_mechanism(self):
+        """Test disabling states makes tools unavailable."""
         toolkit = Toolkit()
 
-        @tool(locks=["action1"])
+        @tool(disables_states=["authenticated"])
         def logout() -> Tuple[str, dict]:
             return "logged out", {}
 
-        @tool()
+        @tool(required_states=["authenticated"])
         def action1() -> Tuple[str, dict]:
             return "action1", {}
 
         toolkit.register_tool(logout)
         toolkit.register_tool(action1)
-        toolkit.set_available_tools({"logout", "action1"})
+        toolkit.set_unlocked_states({"authenticated"})
 
-        # Both available initially
+        # Both available initially (authenticated state is enabled)
         assert toolkit.is_tool_available("logout")
         assert toolkit.is_tool_available("action1")
 
         # Execute logout
         toolkit.execute_sequential([{"name": "logout", "arguments": {}}])
 
-        # action1 should be locked
+        # action1 should no longer be available (authenticated state disabled)
         assert not toolkit.is_tool_available("action1")
 
     def test_sequential_execution_with_context_updates(self):
         """Test sequential execution with immediate context updates."""
         toolkit = Toolkit()
 
-        @tool(provides=["selected_project"], unlocks=["list_issues"])
+        @tool(enables_states=["project_selected"])
         def select_project(project_id: str) -> Tuple[str, dict]:
             return f"Selected {project_id}", {"selected_project": project_id}
 
-        @tool(requires=["selected_project"], provides=["issue_names"])
+        @tool(required_context=["selected_project"], required_states=["project_selected"])
         def list_issues() -> Tuple[str, dict]:
             return "Found 3 issues", {"issue_names": ["BUG-1", "BUG-2", "FEAT-3"]}
 
         toolkit.register_tool(select_project)
         toolkit.register_tool(list_issues)
-        toolkit.set_available_tools({"select_project"})
 
         # Execute sequence
         results = toolkit.execute_sequential([
@@ -182,9 +179,8 @@ class TestToolkit:
         toolkit.register_tool(step1)
         toolkit.register_tool(step2)
         toolkit.register_tool(step3)
-        toolkit.set_available_tools({"step1", "step2", "step3"})
 
-        # Execute pipeline
+        # Execute pipeline (all tools available - no state requirements)
         with pytest.raises(ToolkitPipelineError) as exc_info:
             toolkit.execute_sequential([
                 {"name": "step1", "arguments": {}},
@@ -212,18 +208,17 @@ class TestToolkit:
             """Available tool."""
             return x, {}
 
-        @tool()
+        @tool(required_states=["locked_state"])
         def unavailable_tool(y: int) -> Tuple[int, dict]:
             """Unavailable tool."""
             return y, {}
 
         toolkit.register_tool(available_tool)
         toolkit.register_tool(unavailable_tool)
-        toolkit.set_available_tools({"available_tool"})
 
         schemas = toolkit.generate_schemas()
 
-        # Only available tool should have schema
+        # Only available tool should have schema (unavailable_tool requires locked_state)
         assert len(schemas) == 1
         assert schemas[0]["function"]["name"] == "available_tool"
 
@@ -237,7 +232,6 @@ class TestToolkit:
             return opt, {}
 
         toolkit.register_tool(select_option)
-        toolkit.set_available_tools({"select_option"})
 
         schemas = toolkit.generate_schemas()
         opt_schema = schemas[0]["function"]["parameters"]["properties"]["opt"]
@@ -266,7 +260,6 @@ class TestToolkit:
             return name, {}
 
         toolkit.register_tool(select_user)
-        toolkit.set_available_tools({"select_user"})
 
         schemas = toolkit.generate_schemas()
         name_schema = schemas[0]["function"]["parameters"]["properties"]["name"]
@@ -279,7 +272,7 @@ class TestToolkit:
         toolkit = Toolkit()
         toolkit.context.set("key", "value")
         toolkit.add_tool("tool1", lambda: ("result", {}))
-        toolkit.set_available_tools({"tool1"})
+        toolkit.set_unlocked_states({"state1"})
 
         # Copy toolkit
         copy = toolkit.copy()
@@ -319,12 +312,11 @@ class TestToolkit:
         """Test error when tool exists but not available."""
         toolkit = Toolkit()
 
-        @tool(requires=["auth_token"])
+        @tool(required_context=["auth_token"])
         def protected() -> Tuple[str, dict]:
             return "protected", {}
 
         toolkit.register_tool(protected)
-        toolkit.set_available_tools({"protected"})
 
         # Try to execute without auth_token
         with pytest.raises(ToolkitPipelineError) as exc_info:
@@ -333,3 +325,46 @@ class TestToolkit:
             ])
 
         assert "not available" in str(exc_info.value)
+
+    def test_forbidden_states_mechanism(self):
+        """Test forbidden_states prevents tool availability."""
+        toolkit = Toolkit()
+
+        @tool(
+            required_states=["authenticated"],
+            forbidden_states=["project_selected"],
+            enables_states=["project_selected"]
+        )
+        def select_project() -> Tuple[str, dict]:
+            return "Project selected", {"project_id": 123}
+
+        @tool(
+            required_states=["authenticated", "project_selected"],
+            disables_states=["project_selected"]
+        )
+        def deselect_project() -> Tuple[str, dict]:
+            return "Project deselected", {}
+
+        toolkit.register_tool(select_project)
+        toolkit.register_tool(deselect_project)
+        toolkit.set_unlocked_states({"authenticated"})
+
+        # select_project available (authenticated=True, project_selected=False)
+        assert toolkit.is_tool_available("select_project")
+        # deselect_project not available (project_selected=False)
+        assert not toolkit.is_tool_available("deselect_project")
+
+        # Select project
+        toolkit.execute_sequential([{"name": "select_project", "arguments": {}}])
+
+        # Now select_project NOT available (forbidden state project_selected is enabled)
+        assert not toolkit.is_tool_available("select_project")
+        # deselect_project now available (both required states enabled)
+        assert toolkit.is_tool_available("deselect_project")
+
+        # Deselect project
+        toolkit.execute_sequential([{"name": "deselect_project", "arguments": {}}])
+
+        # Back to initial state
+        assert toolkit.is_tool_available("select_project")
+        assert not toolkit.is_tool_available("deselect_project")

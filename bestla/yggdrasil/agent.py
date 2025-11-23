@@ -127,7 +127,7 @@ class Agent:
 
         # Independent tools (no prefix, always parallel)
         self.independent_toolkit = Toolkit()
-        self.independent_toolkit.set_available_tools(set())  # All tools available
+        # Independent tools have no state requirements, so they're always available
 
         # Conversation history
         self.messages: List[ChatCompletionMessageParam] = []
@@ -181,7 +181,7 @@ class Agent:
             function=function,
             description=description,
         )
-        self.independent_toolkit.available_tools.add(name)
+        # Independent tools have no state requirements, so they're automatically available
         return tool
 
     def register_tool(self, tool: Tool) -> None:
@@ -191,7 +191,7 @@ class Agent:
             tool: Tool instance
         """
         self.independent_toolkit.register_tool(tool)
-        self.independent_toolkit.available_tools.add(tool.name)
+        # Independent tools are automatically available based on their state requirements
 
     def _generate_all_schemas(self, context: ExecutionContext) -> List[dict]:
         """Generate schemas for all available tools from all toolkits.

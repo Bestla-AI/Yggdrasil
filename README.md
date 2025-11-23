@@ -1,6 +1,6 @@
 # Bestla Yggdrasil
 
-A stateful, hierarchical multi-agent tool framework for building sophisticated AI applications.
+A stateful tool framework for building sophisticated AI applications.
 
 ## Overview
 
@@ -13,12 +13,12 @@ Yggdrasil enables AI agents to use tools that:
 
 ### Core Innovation
 
-Traditional AI tool frameworks treat tools as stateless functions. Yggdrasil introduces **stateful toolkits** where tool availability and parameters dynamically change based on execution history and context, enabling complex workflows like authenticated sessions, multi-step transactions, and project-scoped operations.
+Traditional AI tool frameworks treat tools as stateless functions. Yggdrasil introduces **stateful toolkits** where tool availability and parameters dynamically change based on execution history and context, enabling complex workflows like authenticated sessions, multi-step transactions, and scoped operations.
 
 ## Installation
 
 ```bash
-pip install -e .
+pip install bestla-yggdrasil
 ```
 
 For development:
@@ -74,22 +74,18 @@ class ProjectToolkit(Toolkit):
         self.register_tool(list_issues_tool)
         self.register_tool(get_issue_tool)
 
-        # Set initial availability
-        self.set_available_tools({"select_project"})
-
 # Define tools with metadata
 @tool(
-    unlocks=["list_issues"],
-    provides=["selected_project"]
+    enables_states=["project_selected"]
 )
 def select_project(project_id: str) -> Tuple[str, dict]:
     """Select a project to work with."""
     return f"Selected project {project_id}", {"selected_project": project_id}
 
 @tool(
-    requires=["selected_project"],
-    provides=["issue_names"],
-    unlocks=["get_issue"]
+    required_context=["selected_project"],
+    required_states=["project_selected"],
+    enables_states=["issues_loaded"]
 )
 def list_issues() -> Tuple[str, dict]:
     """List all issues in the selected project."""
@@ -98,7 +94,8 @@ def list_issues() -> Tuple[str, dict]:
     return f"Found {len(issues)} issues", {"issue_names": issues}
 
 @tool(
-    requires=["selected_project", "issue_names"]
+    required_context=["selected_project", "issue_names"],
+    required_states=["issues_loaded"]
 )
 def get_issue(name: DynamicStr["issue_names"]) -> Tuple[str, dict]:
     """Get details of a specific issue."""
@@ -168,23 +165,37 @@ Available dynamic types:
 
 ### 3. Finite State Machine (FSM)
 
-Tools can unlock/lock other tools to enforce workflows:
+Tools enable/disable states to control workflows:
 
 ```python
-@tool(unlocks=["authenticated_action"])
+@tool(enables_states=["authenticated"])
 def login(username: str, password: str):
-    # After login, authenticated actions become available
+    # After login, enables "authenticated" state
     return "Logged in", {"auth_token": "..."}
 
-@tool(locks=["authenticated_action"], unlocks=["login"])
+@tool(
+    required_states=["authenticated"],
+    disables_states=["authenticated"]
+)
 def logout():
-    # After logout, authenticated actions are locked
+    # Only available when authenticated, disables the state after execution
     return "Logged out", {}
 
-@tool(requires=["auth_token"])
+@tool(
+    required_context=["auth_token"],
+    required_states=["authenticated"]
+)
 def authenticated_action():
-    # Only available when logged in
+    # Only available when authenticated state is enabled and auth_token in context
     return "Action performed", {}
+
+@tool(
+    required_states=["authenticated"],
+    forbidden_states=["project_selected"]
+)
+def select_project():
+    # Available when authenticated but NOT when project already selected
+    return "Project selected", {}
 ```
 
 ### 4. Hierarchical Agents
@@ -330,7 +341,7 @@ def time_sensitive_operation() -> Tuple[str, dict]:
 #### Combining Decorators
 
 ```python
-@tool(requires=["auth_token"])
+@tool(required_context=["auth_token"], required_states=["authenticated"])
 @retry(max_attempts=3, backoff=1.0)
 @cache_result(ttl=60.0)
 @rate_limit(calls=5, period=60.0)
@@ -398,8 +409,8 @@ def stateless_tool(x: int) -> Tuple[int, dict]:
 Agent
 ├── Multiple Toolkits (with prefixes: plane::, github::)
 │   ├── Context (domain state)
-│   ├── Tools (with dependencies)
-│   └── FSM Logic (unlocks/locks)
+│   ├── Tools (with state dependencies)
+│   └── FSM Logic (enables/disables states)
 └── Independent Toolkit (stateless tools, always parallel)
 ```
 
@@ -407,7 +418,8 @@ Agent
 
 - **Organizational Model**: Agents delegate to sub-agents like managers delegate to workers
 - **Context Ownership**: Each toolkit owns its domain state (isolation)
-- **Explicit State Changes**: Tools explicitly declare what context they modify
+- **State-Based FSM**: Tools control availability through abstract states, not direct tool references
+- **Explicit State Changes**: Tools declare required states, forbidden states, and state transitions
 - **Safety First**: Sequential execution within toolkits prevents race conditions
 - **Performance Where Safe**: Independent operations run in parallel
 
@@ -420,23 +432,29 @@ class AuthToolkit(Toolkit):
     def __init__(self):
         super().__init__()
 
-        @tool(unlocks=["get_profile", "update_settings"])
+        @tool(enables_states=["authenticated"])
         def login(username: str, password: str):
-            # Authenticate and unlock user actions
+            # Authenticate and enable authenticated state
             return "Logged in", {"auth_token": "...", "user_id": username}
 
-        @tool(requires=["auth_token"])
+        @tool(
+            required_context=["auth_token"],
+            required_states=["authenticated"]
+        )
         def get_profile():
             return "Profile data", {}
 
-        @tool(locks=["get_profile", "update_settings"], unlocks=["login"])
+        @tool(
+            required_states=["authenticated"],
+            disables_states=["authenticated"]
+        )
         def logout():
+            # Only available when authenticated, disables state after execution
             return "Logged out", {}
 
         self.register_tool(login)
         self.register_tool(get_profile)
         self.register_tool(logout)
-        self.set_available_tools({"login"})
 ```
 
 ### Project Management
