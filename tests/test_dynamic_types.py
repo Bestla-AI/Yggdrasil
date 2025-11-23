@@ -107,7 +107,7 @@ class TestDynamicArray:
 
         assert schema == {
             "type": "array",
-            "items": {"type": "string", "enum": ["alice", "bob", "charlie"]}
+            "items": {"type": "string", "enum": ["alice", "bob", "charlie"]},
         }
 
 
@@ -170,15 +170,16 @@ class TestDynamicFiltered:
     def test_filtered_values(self):
         """Test filtered values."""
         context = Context()
-        context.set("users", [
-            {"name": "alice", "active": True},
-            {"name": "bob", "active": False},
-            {"name": "charlie", "active": True}
-        ])
+        context.set(
+            "users",
+            [
+                {"name": "alice", "active": True},
+                {"name": "bob", "active": False},
+                {"name": "charlie", "active": True},
+            ],
+        )
 
-        filters = {
-            "active_only": lambda users: [u["name"] for u in users if u.get("active")]
-        }
+        filters = {"active_only": lambda users: [u["name"] for u in users if u.get("active")]}
 
         dynamic_type = DynamicFiltered[("users", "active_only")]
         schema = dynamic_type.generate_schema(context, filters)
@@ -192,11 +193,10 @@ class TestDynamicConstraints:
     def test_generic_schema(self):
         """Test generic schema from context."""
         context = Context()
-        context.set("complex_schema", {
-            "type": "object",
-            "properties": {"name": {"type": "string"}},
-            "required": ["name"]
-        })
+        context.set(
+            "complex_schema",
+            {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
+        )
 
         dynamic_type = DynamicConstraints["complex_schema"]
         schema = dynamic_type.generate_schema(context)

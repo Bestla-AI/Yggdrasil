@@ -57,8 +57,7 @@ class TestParallelExecution:
 
         # Create execution context
         context = ExecutionContext(
-            toolkits=agent.toolkits,
-            independent_toolkit=agent.independent_toolkit
+            toolkits=agent.toolkits, independent_toolkit=agent.independent_toolkit
         )
         results = agent._execute_tool_calls(context, tool_calls)
         end_time = time.time()
@@ -97,10 +96,9 @@ class TestParallelExecution:
         toolkit.register_tool(step2)
 
         # Execute sequentially
-        results = toolkit.execute_sequential([
-            {"name": "step1", "arguments": {}},
-            {"name": "step2", "arguments": {}}
-        ])
+        results = toolkit.execute_sequential(
+            [{"name": "step1", "arguments": {}}, {"name": "step2", "arguments": {}}]
+        )
 
         # Should execute in order: step1_start, step1_end, step2_start, step2_end
         assert execution_order == ["step1_start", "step1_end", "step2_start", "step2_end"]
@@ -132,8 +130,7 @@ class TestParallelExecution:
 
         # Create execution context
         context = ExecutionContext(
-            toolkits=agent.toolkits,
-            independent_toolkit=agent.independent_toolkit
+            toolkits=agent.toolkits, independent_toolkit=agent.independent_toolkit
         )
         results = agent._execute_tool_calls(context, tool_calls)
 
@@ -182,8 +179,7 @@ class TestParallelExecution:
 
         # Create execution context
         context = ExecutionContext(
-            toolkits=agent.toolkits,
-            independent_toolkit=agent.independent_toolkit
+            toolkits=agent.toolkits, independent_toolkit=agent.independent_toolkit
         )
         results = agent._execute_tool_calls(context, tool_calls)
 
@@ -246,8 +242,7 @@ class TestParallelExecution:
 
         # Create execution context
         context = ExecutionContext(
-            toolkits=agent.toolkits,
-            independent_toolkit=agent.independent_toolkit
+            toolkits=agent.toolkits, independent_toolkit=agent.independent_toolkit
         )
         results = agent._execute_tool_calls(context, tool_calls)
         end_time = time.time()

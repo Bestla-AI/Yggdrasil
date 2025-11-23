@@ -86,11 +86,7 @@ class TestContext:
     def test_validation_enabled(self):
         """Test validation with schemas."""
         context = Context(validation_enabled=True)
-        context.schema.define("priority", {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5
-        })
+        context.schema.define("priority", {"type": "integer", "minimum": 1, "maximum": 5})
 
         # Valid value
         context.set("priority", 3)
@@ -103,10 +99,7 @@ class TestContext:
     def test_validation_array(self):
         """Test validation with array schema."""
         context = Context(validation_enabled=True)
-        context.schema.define("tags", {
-            "type": "array",
-            "items": {"type": "string"}
-        })
+        context.schema.define("tags", {"type": "array", "items": {"type": "string"}})
 
         # Valid
         context.set("tags", ["tag1", "tag2"])
@@ -118,11 +111,7 @@ class TestContext:
     def test_no_validation_when_disabled(self):
         """Test that validation doesn't run when disabled."""
         context = Context(validation_enabled=False)
-        context.schema.define("priority", {
-            "type": "integer",
-            "minimum": 1,
-            "maximum": 5
-        })
+        context.schema.define("priority", {"type": "integer", "minimum": 1, "maximum": 5})
 
         # Should not raise even though invalid
         context.set("priority", 10)

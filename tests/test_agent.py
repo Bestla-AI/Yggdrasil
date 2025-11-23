@@ -91,9 +91,9 @@ class TestAgent:
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
         # Execute group
-        results = agent._execute_toolkit_group(context, "test", [
-            {"id": "call_1", "name": "test_tool", "arguments": {"x": 5}}
-        ])
+        results = agent._execute_toolkit_group(
+            context, "test", [{"id": "call_1", "name": "test_tool", "arguments": {"x": 5}}]
+        )
 
         assert len(results) == 1
         assert results[0]["tool_call_id"] == "call_1"
@@ -117,10 +117,14 @@ class TestAgent:
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
         # Execute both
-        results = agent._execute_toolkit_group(context, "independent", [
-            {"id": "call_1", "name": "add", "arguments": {"a": 5, "b": 3}},
-            {"id": "call_2", "name": "multiply", "arguments": {"a": 4, "b": 2}}
-        ])
+        results = agent._execute_toolkit_group(
+            context,
+            "independent",
+            [
+                {"id": "call_1", "name": "add", "arguments": {"a": 5, "b": 3}},
+                {"id": "call_2", "name": "multiply", "arguments": {"a": 4, "b": 2}},
+            ],
+        )
 
         assert len(results) == 2
         # Results can be in any order due to parallel execution
@@ -261,9 +265,7 @@ class TestAgent:
         # Create execution context
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
-        tool_calls = [
-            {"id": "1", "name": "nonexistent_tool", "arguments": {}}
-        ]
+        tool_calls = [{"id": "1", "name": "nonexistent_tool", "arguments": {}}]
 
         results = agent._execute_toolkit_group(context, "unknown_toolkit", tool_calls)
 
@@ -328,9 +330,8 @@ class TestAgent:
 
             # Store the state we saw
             with state_lock:
-                execution_states[execution_id] = (
-                    context.toolkits["test"]
-                    .context.get("execution_id")
+                execution_states[execution_id] = context.toolkits["test"].context.get(
+                    "execution_id"
                 )
 
             return f"Result for {execution_id}"
@@ -338,8 +339,7 @@ class TestAgent:
         # Run multiple simultaneous "executions"
         with ThreadPoolExecutor(max_workers=5) as executor:
             futures = [
-                executor.submit(mock_run_with_state, f"query_{i}", f"exec_{i}")
-                for i in range(5)
+                executor.submit(mock_run_with_state, f"query_{i}", f"exec_{i}") for i in range(5)
             ]
 
             # Wait for all to complete
@@ -511,10 +511,14 @@ class TestAgent:
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
         # Execute - should handle pipeline error
-        results = agent._execute_toolkit_group(context, "test", [
-            {"id": "call_1", "name": "step1", "arguments": {}},
-            {"id": "call_2", "name": "step2_fail", "arguments": {}},
-        ])
+        results = agent._execute_toolkit_group(
+            context,
+            "test",
+            [
+                {"id": "call_1", "name": "step1", "arguments": {}},
+                {"id": "call_2", "name": "step2_fail", "arguments": {}},
+            ],
+        )
 
         # Should have results for both calls
         assert len(results) == 2
@@ -536,16 +540,13 @@ class TestAgent:
                 self.id = "call_1"
                 self.function = Mock()
                 self.function.name = "test_tool"
-                self.function.arguments = '{}'
+                self.function.arguments = "{}"
 
             def __getitem__(self, key):
                 if key == "id":
                     return self.id
                 elif key == "function":
-                    return {
-                        "name": self.function.name,
-                        "arguments": self.function.arguments
-                    }
+                    return {"name": self.function.name, "arguments": self.function.arguments}
                 raise KeyError(key)
 
         # Mock provider to always return tool calls (infinite loop scenario)
@@ -686,9 +687,9 @@ class TestAgent:
 
         context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
-        results = agent._execute_toolkit_group(context, "independent", [
-            {"id": "call_1", "name": "failing_tool", "arguments": {}}
-        ])
+        results = agent._execute_toolkit_group(
+            context, "independent", [{"id": "call_1", "name": "failing_tool", "arguments": {}}]
+        )
 
         assert len(results) == 1
         assert results[0]["role"] == "tool"

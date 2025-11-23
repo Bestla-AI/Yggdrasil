@@ -10,6 +10,7 @@ class TestTool:
 
     def test_create_tool(self):
         """Test creating a basic tool."""
+
         def add(a: int, b: int) -> Tuple[int, dict]:
             return a + b, {}
 
@@ -19,6 +20,7 @@ class TestTool:
 
     def test_tool_with_metadata(self):
         """Test tool with metadata."""
+
         def select_project(project_id: str) -> Tuple[str, dict]:
             """Select a project."""
             return f"Selected {project_id}", {"selected_project": project_id}
@@ -27,7 +29,7 @@ class TestTool:
             function=select_project,
             required_context=["auth_token"],
             enables_states=["project_selected"],
-            disables_states=["project_browsing"]
+            disables_states=["project_browsing"],
         )
 
         assert t.required_context == ["auth_token"]
@@ -36,6 +38,7 @@ class TestTool:
 
     def test_execute_tool(self):
         """Test executing a tool."""
+
         def add(a: int, b: int) -> Tuple[int, dict]:
             return a + b, {}
 
@@ -47,6 +50,7 @@ class TestTool:
 
     def test_execute_with_context_updates(self):
         """Test tool that returns context updates."""
+
         def create_issue(name: str) -> Tuple[str, dict]:
             return f"Created {name}", {"last_issue": name}
 
@@ -58,13 +62,11 @@ class TestTool:
 
     def test_check_context_requirements(self):
         """Test checking context requirements."""
+
         def protected_action() -> Tuple[str, dict]:
             return "Done", {}
 
-        t = Tool(
-            function=protected_action,
-            required_context=["auth_token", "user_id"]
-        )
+        t = Tool(function=protected_action, required_context=["auth_token", "user_id"])
 
         context = Context()
         all_present, missing = t.check_context_requirements(context)
@@ -83,6 +85,7 @@ class TestTool:
 
     def test_generate_schema_basic(self):
         """Test generating basic JSON schema."""
+
         def add(a: int, b: int) -> Tuple[int, dict]:
             """Add two numbers."""
             return a + b, {}
@@ -100,6 +103,7 @@ class TestTool:
 
     def test_generate_schema_with_dynamic_type(self):
         """Test generating schema with dynamic types."""
+
         def select_issue(name: DynamicStr["issue_names"]) -> Tuple[str, dict]:
             return f"Selected {name}", {}
 
@@ -114,10 +118,8 @@ class TestTool:
 
     def test_tool_decorator(self):
         """Test @tool decorator."""
-        @tool(
-            required_context=["selected_project"],
-            enables_states=["issues_loaded"]
-        )
+
+        @tool(required_context=["selected_project"], enables_states=["issues_loaded"])
         def list_issues() -> Tuple[str, dict]:
             """List issues in project."""
             return "Found 5 issues", {"issue_names": ["BUG-1", "BUG-2"]}
@@ -129,6 +131,7 @@ class TestTool:
 
     def test_tool_with_optional_params(self):
         """Test tool with optional parameters."""
+
         def greet(name: str, greeting: str = "Hello") -> Tuple[str, dict]:
             return f"{greeting}, {name}!", {}
 
@@ -143,6 +146,7 @@ class TestTool:
 
     def test_tool_without_type_hints(self):
         """Test tool without type hints defaults to string."""
+
         def untyped_tool(param):
             return "result", {}
 

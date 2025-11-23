@@ -18,10 +18,7 @@ class TestDynamicUnion:
         dynamic_type = DynamicUnion[("users", "admins")]
         schema = dynamic_type.generate_schema(context)
 
-        assert schema == {
-            "type": "string",
-            "enum": ["alice", "bob", "charlie", "diana"]
-        }
+        assert schema == {"type": "string", "enum": ["alice", "bob", "charlie", "diana"]}
 
     def test_union_combines_three_lists(self):
         """Test combining three context lists."""
@@ -33,10 +30,7 @@ class TestDynamicUnion:
         dynamic_type = DynamicUnion[("users", "admins", "guests")]
         schema = dynamic_type.generate_schema(context)
 
-        assert schema == {
-            "type": "string",
-            "enum": ["alice", "bob", "charlie", "diana", "eve"]
-        }
+        assert schema == {"type": "string", "enum": ["alice", "bob", "charlie", "diana", "eve"]}
 
     def test_union_removes_duplicates(self):
         """Test that duplicate values are removed."""
@@ -60,10 +54,7 @@ class TestDynamicUnion:
         schema = dynamic_type.generate_schema(context)
 
         # Should still work with just users
-        assert schema == {
-            "type": "string",
-            "enum": ["alice", "bob"]
-        }
+        assert schema == {"type": "string", "enum": ["alice", "bob"]}
 
     def test_union_all_keys_missing(self):
         """Test union when all keys are missing."""
@@ -116,10 +107,7 @@ class TestDynamicConditional:
         schema = dynamic_type.generate_schema(context)
 
         # Should use advanced_options because advanced_mode is True
-        assert schema == {
-            "type": "string",
-            "enum": ["opt1", "opt2", "opt3", "opt4"]
-        }
+        assert schema == {"type": "string", "enum": ["opt1", "opt2", "opt3", "opt4"]}
 
     def test_conditional_false_branch(self):
         """Test conditional when condition is falsy."""
@@ -132,10 +120,7 @@ class TestDynamicConditional:
         schema = dynamic_type.generate_schema(context)
 
         # Should use simple_options because advanced_mode is False
-        assert schema == {
-            "type": "string",
-            "enum": ["opt1", "opt2"]
-        }
+        assert schema == {"type": "string", "enum": ["opt1", "opt2"]}
 
     def test_conditional_with_string_condition(self):
         """Test conditional with string condition."""
@@ -148,10 +133,7 @@ class TestDynamicConditional:
         schema = dynamic_type.generate_schema(context)
 
         # Non-empty string is truthy
-        assert schema == {
-            "type": "string",
-            "enum": ["1", "2", "3", "4", "5"]
-        }
+        assert schema == {"type": "string", "enum": ["1", "2", "3", "4", "5"]}
 
     def test_conditional_with_none_condition(self):
         """Test conditional with None condition (falsy)."""
@@ -166,10 +148,7 @@ class TestDynamicConditional:
         schema = dynamic_type.generate_schema(context)
 
         # None is falsy, should use disabled_options
-        assert schema == {
-            "type": "string",
-            "enum": ["x"]
-        }
+        assert schema == {"type": "string", "enum": ["x"]}
 
     def test_conditional_with_dict_schema(self):
         """Test conditional with dict schema values."""
@@ -195,10 +174,7 @@ class TestDynamicConditional:
         schema = dynamic_type.generate_schema(context)
 
         # Missing key is falsy, should use option2
-        assert schema == {
-            "type": "string",
-            "enum": ["c", "d"]
-        }
+        assert schema == {"type": "string", "enum": ["c", "d"]}
 
     def test_conditional_missing_schema_key(self):
         """Test conditional when selected schema key doesn't exist."""
@@ -223,19 +199,13 @@ class TestDynamicConditional:
         dynamic_type = DynamicConditional[("level", "high_level", "low_level")]
         schema = dynamic_type.generate_schema(context)
 
-        assert schema == {
-            "type": "string",
-            "enum": ["advanced1", "advanced2"]
-        }
+        assert schema == {"type": "string", "enum": ["advanced1", "advanced2"]}
 
         # Test with 0 (falsy)
         context.set("level", 0)
         schema = dynamic_type.generate_schema(context)
 
-        assert schema == {
-            "type": "string",
-            "enum": ["basic1"]
-        }
+        assert schema == {"type": "string", "enum": ["basic1"]}
 
     def test_conditional_requires_three_params(self):
         """Test that DynamicConditional requires exactly 3 parameters."""

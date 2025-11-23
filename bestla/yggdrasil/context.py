@@ -76,8 +76,8 @@ class Context:
         Returns:
             Context value or default
         """
-        # Support nested access: "project.id"
-        if "." in key:
+        # Support nested access: "project.id" (only for string keys)
+        if isinstance(key, str) and "." in key:
             parts = key.split(".")
             current = self._data
             for part in parts:

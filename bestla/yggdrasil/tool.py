@@ -130,7 +130,11 @@ class Tool:
         return len(missing) == 0, missing
 
     def __repr__(self) -> str:
-        return f"Tool(name='{self.name}', required_context={self.required_context}, required_states={self.required_states})"
+        return (
+            f"Tool(name='{self.name}', "
+            f"required_context={self.required_context}, "
+            f"required_states={self.required_states})"
+        )
 
 
 def tool(

@@ -111,6 +111,7 @@ class TestRetryDecorator:
 
     def test_retry_preserves_function_metadata(self):
         """Test that decorator preserves function metadata."""
+
         @retry(max_attempts=3)
         def documented_func() -> Tuple[str, dict]:
             """This is a docstring."""
@@ -222,6 +223,7 @@ class TestCacheResultDecorator:
 
     def test_cache_size(self):
         """Test getting cache size."""
+
         @cache_result()
         def sized_func(x: int) -> Tuple[int, dict]:
             return x * 2, {}
@@ -243,6 +245,7 @@ class TestRateLimitDecorator:
 
     def test_rate_limit_allows_calls_within_limit(self):
         """Test that calls within limit are allowed."""
+
         @rate_limit(calls=3, period=1.0)
         def limited_func() -> Tuple[str, dict]:
             return "success", {}
@@ -258,6 +261,7 @@ class TestRateLimitDecorator:
 
     def test_rate_limit_window_sliding(self):
         """Test that rate limit window slides."""
+
         @rate_limit(calls=2, period=0.2)
         def windowed_func() -> Tuple[str, dict]:
             return "success", {}
@@ -279,6 +283,7 @@ class TestRateLimitDecorator:
 
     def test_rate_limit_independent_per_function(self):
         """Test that rate limits are independent per function."""
+
         @rate_limit(calls=2, period=1.0)
         def func1() -> Tuple[str, dict]:
             return "func1", {}
