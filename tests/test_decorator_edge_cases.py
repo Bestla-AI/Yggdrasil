@@ -198,7 +198,7 @@ class TestTimeoutDecorator:
             time.sleep(0.1)
             return "done", {}
 
-        result, updates = timed_tool.execute({})
+        result, updates = timed_tool.execute()
         assert result == "done"
 
     @pytest.mark.skipif(platform.system() != "Windows", reason="Test Windows-specific behavior")
