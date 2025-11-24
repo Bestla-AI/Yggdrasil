@@ -3,7 +3,7 @@
 A stateful multi-agent tool framework for building sophisticated AI applications.
 
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License: Modified MIT](https://img.shields.io/badge/License-Modified%20MIT-yellow.svg)](LICENSE)
 [![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://pypi.org/project/bestla-yggdrasil/)
 
 ## Overview
@@ -543,7 +543,9 @@ Contributions welcome! Please check the [issues page](https://github.com/BestlaA
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) for details.
+Modified MIT License - see [LICENSE](LICENSE) for details.
+
+This project uses a Modified MIT License with an attribution requirement for large-scale commercial use (>100M MAU or >$20M monthly revenue).
 
 ## Links
 
