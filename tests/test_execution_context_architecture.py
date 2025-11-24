@@ -4,19 +4,19 @@ These tests demonstrate the new architecture where ConversationContext is a
 component within ExecutionContext, as conversation is tied to specific execution.
 """
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from openai.types.chat import (
-    ChatCompletionUserMessageParam,
     ChatCompletionSystemMessageParam,
-    ChatCompletionAssistantMessageParam,
+    ChatCompletionUserMessageParam,
 )
 
 from bestla.yggdrasil import (
     Agent,
-    ExecutionContext,
-    ConversationContext,
     ContextManager,
+    ConversationContext,
+    ExecutionContext,
     Toolkit,
 )
 
@@ -54,7 +54,10 @@ class TestExecutionContextArchitecture:
         cm = ContextManager(threshold=1000)
         conv = ConversationContext(
             messages=[
-                ChatCompletionSystemMessageParam(role="system", content="Custom system")
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content="Custom system",
+                )
             ],
             context_manager=cm,
         )
@@ -95,12 +98,18 @@ class TestExecutionContextArchitecture:
 
         # Add message to first conversation
         exec_ctx1.conversation.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Message 1")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            )
         )
 
         # Add different message to second conversation
         exec_ctx2.conversation.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Message 2")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            )
         )
 
         # Should be independent
@@ -114,7 +123,10 @@ class TestExecutionContextArchitecture:
         # Create shared conversation
         shared_conv = ConversationContext()
         shared_conv.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Shared message")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Shared message",
+            )
         )
 
         toolkit = Toolkit()
@@ -137,7 +149,10 @@ class TestExecutionContextArchitecture:
 
         # Modifications via one affect the other
         exec_ctx1.conversation.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Via exec_ctx1")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Via exec_ctx1",
+            )
         )
 
         assert len(exec_ctx2.conversation.messages) == 2
@@ -154,10 +169,16 @@ class TestAgentWithExecutionContext:
         # Create custom conversation with pre-existing messages
         conv = ConversationContext()
         conv.messages.append(
-            ChatCompletionSystemMessageParam(role="system", content="Custom system")
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Custom system",
+            )
         )
         conv.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Previous message")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Previous message",
+            )
         )
 
         # Create execution context with this conversation
@@ -245,7 +266,10 @@ class TestAgentWithExecutionContext:
         # Create shared execution context
         shared_conv = ConversationContext()
         shared_conv.messages.append(
-            ChatCompletionSystemMessageParam(role="system", content="Shared system")
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Shared system",
+            )
         )
 
         agent1 = Agent(provider=mock_provider, model="gpt-4")
@@ -294,7 +318,10 @@ class TestExecutionContextIsolation:
         """Test that conversation is NOT copied (shared with caller)."""
         conv = ConversationContext()
         conv.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Original")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Original",
+            )
         )
 
         # Create execution context with conversation
@@ -309,7 +336,10 @@ class TestExecutionContextIsolation:
 
         # Modifications affect original
         exec_ctx.conversation.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Added via exec_ctx")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Added via exec_ctx",
+            )
         )
 
         assert len(conv.messages) == 2

@@ -1,14 +1,15 @@
 """Context manager for automated conversation context compaction."""
 
 from typing import Callable, List
+
 from openai import OpenAI
 from openai.types.chat import ChatCompletionMessageParam
 
 from bestla.yggdrasil.context_utils import (
-    estimate_tokens,
-    clear_tool_results,
-    summarize_messages,
     build_compacted_messages,
+    clear_tool_results,
+    estimate_tokens,
+    summarize_messages,
 )
 
 
@@ -125,7 +126,12 @@ class ContextManager:
 
         Example:
             >>> cm = ContextManager()
-            >>> messages = [{"role": "user", "content": "Hello"}]
+            >>> messages = [
+            ...     ChatCompletionUserMessageParam(
+            ...         role="user",
+            ...         content="Hello",
+            ...     )
+            ... ]
             >>> tokens = cm.estimate_tokens(messages)
             >>> assert isinstance(tokens, int) and tokens >= 0
         """
@@ -149,7 +155,9 @@ class ContextManager:
 
         return result
 
-    def compact(self, messages: List[ChatCompletionMessageParam]) -> List[ChatCompletionMessageParam]:
+    def compact(
+        self, messages: List[ChatCompletionMessageParam]
+    ) -> List[ChatCompletionMessageParam]:
         """Apply compaction strategy to messages.
 
         Args:

@@ -1,10 +1,15 @@
 """Utility functions for context management and compaction."""
 
-import re
 from typing import List
-from openai import OpenAI
-from openai.types.chat import ChatCompletionMessageParam, ChatCompletionUserMessageParam
 
+from openai import OpenAI
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,  # noqa: F401 - used in docstrings
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,  # noqa: F401 - used in docstrings
+    ChatCompletionToolMessageParam,  # noqa: F401 - used in docstrings
+    ChatCompletionUserMessageParam,
+)
 
 # Token counter type for better documentation
 TokenCounter = type[List[ChatCompletionMessageParam], int]
@@ -113,17 +118,25 @@ def summarize_messages(
     if len(messages_to_summarize) <= keep_recent:
         return None
 
-    old_messages = messages_to_summarize[:-keep_recent] if keep_recent > 0 else messages_to_summarize
+    old_messages = (
+        messages_to_summarize[:-keep_recent]
+        if keep_recent > 0
+        else messages_to_summarize
+    )
 
     if not old_messages:
         return None
 
     conversation_text = _format_messages_for_summary(old_messages)
 
-    summarization_prompt = f"""You are summarizing an older portion of a conversation that exceeded the context window.
-This summary will REPLACE the original messages to save tokens while preserving critical information.
+    summarization_prompt = f"""
+You are summarizing an older portion of a
+conversation that exceeded the context window.
+This summary will REPLACE the original messages
+to save tokens while preserving critical information.
 
-IMPORTANT: This is a COMPACTED CONTEXT SUMMARY. The model will see this summary instead of the full conversation history.
+IMPORTANT: This is a COMPACTED CONTEXT SUMMARY.
+The model will see this summary instead of the full conversation history.
 
 Your summary must include:
 1. Key decisions and conclusions reached
@@ -136,12 +149,16 @@ Your summary must include:
 CONVERSATION TO SUMMARIZE (this will be removed and replaced with your summary):
 {conversation_text}
 
-Provide a comprehensive summary in 2-4 well-structured paragraphs. Be thorough - missing information cannot be recovered."""
+Provide a comprehensive summary in 2-4 well-structured paragraphs.
+Be thorough - missing information cannot be recovered."""
 
     response = provider.chat.completions.create(
         model=model,
         messages=[
-            {"role": "user", "content": summarization_prompt}
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=summarization_prompt,
+            )
         ],
     )
 
@@ -170,9 +187,19 @@ def _format_messages_for_summary(messages: List[ChatCompletionMessageParam]) -> 
 
     Example:
         >>> messages = [
-        ...     {"role": "user", "content": "Hello"},
-        ...     {"role": "assistant", "content": "Hi there!"},
-        ...     {"role": "tool", "tool_call_id": "call_123", "content": "Result"}
+        ...     ChatCompletionUserMessageParam(
+        ...         role="user",
+        ...         content="Hello",
+        ...     ),
+        ...     ChatCompletionAssistantMessageParam(
+        ...         role="assistant",
+        ...         content="Hi there!",
+        ...     ),
+        ...     ChatCompletionToolMessageParam(
+        ...         role="tool",
+        ...         tool_call_id="call_123",
+        ...         content="Result",
+        ...     )
         ... ]
         >>> formatted = _format_messages_for_summary(messages)
         >>> assert "User: Hello" in formatted
@@ -220,8 +247,14 @@ def build_compacted_messages(
 
     Example:
         >>> messages = [
-        ...     {"role": "system", "content": "You are helpful"},
-        ...     {"role": "user", "content": "Build a REST API"},  # Task directive
+        ...     ChatCompletionSystemMessageParam(
+        ...         role="system",
+        ...         content="You are helpful",
+        ...     ),
+        ...     ChatCompletionUserMessageParam(
+        ...         role="user",
+        ...         content="Build a REST API",
+        ...     ),  # Task directive
         ...     # ... many messages ...
         ... ]
         >>> compacted = build_compacted_messages(messages, summary, keep_recent=5)

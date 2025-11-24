@@ -1,16 +1,16 @@
 """Tests for ConversationContext class."""
 
-import pytest
 from unittest.mock import Mock
+
+import pytest
 from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
+    ChatCompletionSystemMessageParam,
     ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
 )
 
-from bestla.yggdrasil import ConversationContext, ContextManager
+from bestla.yggdrasil import ContextManager, ConversationContext
 
 
 class TestConversationContextCreation:
@@ -26,8 +26,14 @@ class TestConversationContextCreation:
     def test_create_with_messages(self):
         """Test creating context with initial messages."""
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Hello"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            ),
         ]
 
         ctx = ConversationContext(messages=messages)
@@ -47,7 +53,10 @@ class TestConversationContextCreation:
     def test_create_with_both(self):
         """Test creating context with messages and context manager."""
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            )
         ]
         cm = ContextManager(threshold=1000)
 
@@ -64,7 +73,10 @@ class TestConversationContextMessages:
         """Test getting messages via property."""
         ctx = ConversationContext()
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            )
         )
 
         assert len(ctx.messages) == 1
@@ -74,8 +86,14 @@ class TestConversationContextMessages:
         """Test setting messages with valid list."""
         ctx = ConversationContext()
         new_messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User",
+            ),
         ]
 
         ctx.messages = new_messages
@@ -98,9 +116,12 @@ class TestConversationContextMessages:
         with pytest.raises(TypeError, match="messages must be a list"):
             ctx.messages = "invalid"
 
-        # Dict
+        # Dict (not a list)
         with pytest.raises(TypeError, match="messages must be a list"):
-            ctx.messages = {"role": "user", "content": "test"}
+            ctx.messages = ChatCompletionUserMessageParam(
+                               role="user",
+                               content="test",
+                           )  # type: ignore
 
         # Integer
         with pytest.raises(TypeError, match="messages must be a list"):
@@ -108,7 +129,10 @@ class TestConversationContextMessages:
 
         # Tuple (not a list!)
         with pytest.raises(TypeError, match="messages must be a list"):
-            ctx.messages = ({"role": "user", "content": "test"},)
+            ctx.messages = (ChatCompletionUserMessageParam(
+                                role="user",
+                                content="test",
+                            ),)  # type: ignore
 
     def test_messages_mutation(self):
         """Test that messages list can be mutated."""
@@ -116,14 +140,23 @@ class TestConversationContextMessages:
 
         # Append
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="First")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="First",
+            )
         )
         assert len(ctx.messages) == 1
 
         # Extend
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Second"),
-            ChatCompletionUserMessageParam(role="user", content="Third"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Second",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Third",
+            ),
         ])
         assert len(ctx.messages) == 3
 
@@ -133,7 +166,10 @@ class TestConversationContextMessages:
         assert len(ctx.messages) == 2
 
         # Insert
-        ctx.messages.insert(0, ChatCompletionSystemMessageParam(role="system", content="System"))
+        ctx.messages.insert(0, ChatCompletionSystemMessageParam(
+                                   role="system",
+                                   content="System",
+                               ))
         assert len(ctx.messages) == 3
         assert ctx.messages[0]["role"] == "system"
 
@@ -141,7 +177,10 @@ class TestConversationContextMessages:
         """Test assigning empty list to messages."""
         ctx = ConversationContext()
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            )
         )
 
         ctx.messages = []
@@ -164,9 +203,18 @@ class TestConversationContextClearMessages:
         """Test clearing context with messages."""
         ctx = ConversationContext()
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test 1"),
-            ChatCompletionUserMessageParam(role="user", content="Test 2"),
-            ChatCompletionUserMessageParam(role="user", content="Test 3"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 3",
+            ),
         ])
 
         assert len(ctx.messages) == 3
@@ -181,7 +229,10 @@ class TestConversationContextClearMessages:
         original_ref = id(ctx.messages)
 
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            )
         )
         ctx.clear_messages()
 
@@ -195,7 +246,10 @@ class TestConversationContextCompaction:
         """Test should_compact returns False when no context_manager."""
         ctx = ConversationContext()
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test " * 1000)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test " * 1000,
+            )
             for _ in range(100)
         ])
 
@@ -206,7 +260,10 @@ class TestConversationContextCompaction:
         cm = ContextManager(threshold=None)
         ctx = ConversationContext(context_manager=cm)
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test " * 1000)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test " * 1000,
+            )
             for _ in range(100)
         ])
 
@@ -217,7 +274,10 @@ class TestConversationContextCompaction:
         cm = ContextManager(threshold=100000)
         ctx = ConversationContext(context_manager=cm)
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Short message")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Short message",
+            )
         )
 
         assert ctx.should_compact() is False
@@ -227,7 +287,10 @@ class TestConversationContextCompaction:
         cm = ContextManager(threshold=10)  # Very low threshold
         ctx = ConversationContext(context_manager=cm)
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test " * 100)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test " * 100,
+            )
             for _ in range(50)
         ])
 
@@ -237,8 +300,14 @@ class TestConversationContextCompaction:
         """Test compact does nothing without context_manager."""
         ctx = ConversationContext()
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test 1"),
-            ChatCompletionUserMessageParam(role="user", content="Test 2"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 2",
+            ),
         ])
 
         original_length = len(ctx.messages)
@@ -253,13 +322,37 @@ class TestConversationContextCompaction:
 
         # Add messages with many tool results
         ctx.messages.extend([
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="3", content="Recent Tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="3",
+                content="Recent Tool",
+            ),
         ])
 
         original_count = len(ctx.messages)
@@ -289,13 +382,34 @@ class TestConversationContextCompaction:
 
         ctx = ConversationContext(context_manager=cm)
         ctx.messages.extend([
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Recent response"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Recent response",
+            ),
         ])
 
         ctx.compact()
@@ -324,9 +438,18 @@ class TestConversationContextRepresentation:
         """Test repr with messages."""
         ctx = ConversationContext()
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test 1"),
-            ChatCompletionUserMessageParam(role="user", content="Test 2"),
-            ChatCompletionUserMessageParam(role="user", content="Test 3"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test 3",
+            ),
         ])
 
         repr_str = repr(ctx)
@@ -358,7 +481,10 @@ class TestConversationContextSharing:
 
         # Modify via first reference
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Via ctx")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Via ctx",
+            )
         )
 
         # Check via second reference
@@ -367,7 +493,10 @@ class TestConversationContextSharing:
 
         # Modify via second reference
         ctx2.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Via ctx2")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Via ctx2",
+            )
         )
 
         # Check via first reference
@@ -380,10 +509,16 @@ class TestConversationContextSharing:
         ctx2 = ConversationContext()
 
         ctx1.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Context 1")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Context 1",
+            )
         )
         ctx2.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Context 2")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Context 2",
+            )
         )
 
         assert len(ctx1.messages) == 1
@@ -429,7 +564,10 @@ class TestConversationContextEdgeCases:
         """Test handling messages with None content."""
         ctx = ConversationContext()
         ctx.messages.append(
-            ChatCompletionAssistantMessageParam(role="assistant", content=None)
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=None,
+            )
         )
 
         assert len(ctx.messages) == 1
@@ -443,20 +581,19 @@ class TestConversationContextEdgeCases:
 
         # Add messages
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ])
-
-        # Get reference before compaction
-        original_ref = id(ctx.messages)
 
         # Compact
         ctx.compact()
-
-        # Should be same reference (though contents changed)
-        # Note: This actually creates a new list via property setter
-        # But the property getter returns the same reference
-        current_ref = id(ctx.messages)
 
         # The internal _messages gets reassigned, but property works correctly
         assert len(ctx.messages) >= 1  # Should have at least user message
@@ -468,7 +605,10 @@ class TestConversationContextEdgeCases:
         # Add 10,000 messages
         for i in range(10000):
             ctx.messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
 
         assert len(ctx.messages) == 10000
@@ -484,17 +624,26 @@ class TestConversationContextEdgeCases:
         # Message with very long content
         long_content = "A" * 100000
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content=long_content)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=long_content,
+            )
         )
 
         # Message with unicode
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Hello 世界 🌍")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello 世界 🌍",
+            )
         )
 
         # Message with special characters
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Special: \n\t\r\\\"'")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Special: \n\t\r\\\"'",
+            )
         )
 
         assert len(ctx.messages) == 3
@@ -517,19 +666,32 @@ class TestConversationContextIntegration:
 
         # Add system message
         ctx.messages.append(
-            ChatCompletionSystemMessageParam(role="system", content="You are helpful")
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="You are helpful",
+            )
         )
 
         # Simulate conversation with longer content to exceed threshold
         for i in range(10):
             ctx.messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Query {i} " * 10)
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Query {i} " * 10,
+                )
             )
             ctx.messages.append(
-                ChatCompletionAssistantMessageParam(role="assistant", content=f"Response {i} " * 10)
+                ChatCompletionAssistantMessageParam(
+                    role="assistant",
+                    content=f"Response {i} " * 10,
+                )
             )
             ctx.messages.append(
-                ChatCompletionToolMessageParam(role="tool", tool_call_id=f"call_{i}", content=f"Tool result {i} " * 10)
+                ChatCompletionToolMessageParam(
+                    role="tool",
+                    tool_call_id=f"call_{i}",
+                    content=f"Tool result {i} " * 10,
+                )
             )
 
             # Check compaction
@@ -552,8 +714,14 @@ class TestConversationContextIntegration:
 
         # Add messages
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ])
 
         # Reset
@@ -562,7 +730,10 @@ class TestConversationContextIntegration:
 
         # Add new messages
         ctx.messages.append(
-            ChatCompletionUserMessageParam(role="user", content="New message")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="New message",
+            )
         )
 
         assert len(ctx.messages) == 1
@@ -577,8 +748,15 @@ class TestConversationContextIntegration:
         ctx.context_manager = cm1
 
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Test"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Test",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ])
 
         ctx.compact()
@@ -596,15 +774,22 @@ class TestConversationContextIntegration:
 
         # Add more messages
         ctx.messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="More 1"),
-            ChatCompletionUserMessageParam(role="user", content="More 2"),
-            ChatCompletionUserMessageParam(role="user", content="More 3"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="More 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="More 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="More 3",
+            ),
         ])
 
         # Should use new strategy
         ctx.compact()
 
-        # Should have summary
-        has_summary = any("[COMPACTED CONTEXT" in str(m.get("content", "")) for m in ctx.messages)
         # May or may not have summary depending on message count, but should not crash
         assert True  # Just verify it doesn't crash

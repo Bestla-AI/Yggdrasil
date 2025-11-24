@@ -1,8 +1,13 @@
 """Tests for dynamic type system."""
 
+import sys
+import threading
+import time
+from typing import Dict, List, Optional, Tuple, Union
+
 import pytest
 
-from bestla.yggdrasil import Context
+from bestla.yggdrasil import Agent, Context, ExecutionContext, Toolkit, tool
 from bestla.yggdrasil.dynamic_types import (
     DynamicArray,
     DynamicConditional,
@@ -15,6 +20,7 @@ from bestla.yggdrasil.dynamic_types import (
     DynamicNested,
     DynamicPattern,
     DynamicStr,
+    DynamicType,
     DynamicUnion,
     generate_param_schema,
 )
@@ -440,32 +446,6 @@ class TestDynamicConditional:
 
         with pytest.raises(ValueError, match="exactly 3 parameters"):
             DynamicConditional[("one", "two", "three", "four")]
-"""Tests for dynamic types edge cases."""
-
-import sys
-import threading
-import time
-from typing import List, Tuple
-
-import pytest
-
-from bestla.yggdrasil import Agent, Context, DynamicStr, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
-from bestla.yggdrasil.dynamic_types import (
-    DynamicArray,
-    DynamicConditional,
-    DynamicConst,
-    DynamicConstraints,
-    DynamicFiltered,
-    DynamicFloat,
-    DynamicFormat,
-    DynamicInt,
-    DynamicNested,
-    DynamicPattern,
-    DynamicStr,
-    DynamicUnion,
-    generate_param_schema,
-)
 
 
 class TestDynamicTypeEdgeCases:
@@ -1014,7 +994,6 @@ class TestComplexTypeHints:
 
     def test_tool_with_union_type(self):
         """Test tool with Union type hint."""
-        from typing import Union
 
         @tool()
         def union_tool(value: Union[str, int]) -> Tuple[str, dict]:
@@ -1027,7 +1006,6 @@ class TestComplexTypeHints:
 
     def test_tool_with_optional_type(self):
         """Test tool with Optional type hint."""
-        from typing import Optional
 
         @tool()
         def optional_tool(value: Optional[str] = None) -> Tuple[str, dict]:
@@ -1052,7 +1030,6 @@ class TestComplexTypeHints:
 
     def test_tool_with_dict_type_hint(self):
         """Test tool with dict type hint."""
-        from typing import Dict
 
         @tool()
         def dict_tool(mapping: Dict[str, int]) -> Tuple[str, dict]:
@@ -1065,7 +1042,7 @@ class TestComplexTypeHints:
 
     def test_tool_with_nested_generic(self):
         """Test tool with nested generic type."""
-        from typing import Dict, List
+        from typing import List
 
         @tool()
         def nested_generic(data: Dict[str, List[int]]) -> Tuple[str, dict]:
@@ -1403,18 +1380,6 @@ class TestEmptyToolkitBehavior:
         assert all("empty::" not in s["function"]["name"] for s in schemas)
 """Final tests to achieve maximum coverage."""
 
-from typing import Tuple
-
-import pytest
-
-from bestla.yggdrasil import Context, Toolkit, tool
-from bestla.yggdrasil.dynamic_types import (
-    DynamicArray,
-    DynamicConstraints,
-    DynamicNested,
-    DynamicPattern,
-    DynamicType,
-)
 
 
 class TestDynamicTypeBaseClass:
@@ -1431,107 +1396,4 @@ class TestDynamicTypeBaseClass:
         # generate_schema should raise NotImplementedError
         with pytest.raises(NotImplementedError):
             dt.generate_schema(Context())
-
-
-class TestDynamicArrayEdgeCases:
-    """Test DynamicArray edge cases."""
-
-    def test_dynamic_array_with_non_list(self):
-        """Test DynamicArray when value is not a list."""
-        context = Context()
-        context.set("items", "just_a_string")
-
-        schema = DynamicArray["items"].generate_schema(context)
-
-        # Should return basic array schema
-        assert schema["type"] == "array"
-        # No items constraint when value is not a list
-
-
-class TestDynamicNestedEdgeCases:
-    """Test DynamicNested edge cases."""
-
-    def test_dynamic_nested_with_list(self):
-        """Test DynamicNested when nested value is list."""
-        context = Context()
-        context.set("project", {"statuses": ["todo", "in_progress", "done"]})
-
-        schema = DynamicNested["project.statuses"].generate_schema(context)
-
-        # Should create enum from nested list
-        assert schema["type"] == "string"
-        assert "enum" in schema
-        assert schema["enum"] == ["todo", "in_progress", "done"]
-
-    def test_dynamic_nested_with_non_list(self):
-        """Test DynamicNested when nested value is not list."""
-        context = Context()
-        context.set("project", {"status": "active"})
-
-        schema = DynamicNested["project.status"].generate_schema(context)
-
-        # Should return basic string schema
-        assert schema == {"type": "string"}
-
-
-class TestDynamicPatternEdgeCases:
-    """Test DynamicPattern edge cases."""
-
-    def test_dynamic_pattern_with_string_value(self):
-        """Test DynamicPattern when context value is string pattern."""
-        context = Context()
-        context.set("issue_pattern", "^[A-Z]+-[0-9]+$")
-
-        schema = DynamicPattern["issue_pattern"].generate_schema(context)
-
-        assert schema["type"] == "string"
-        assert schema["pattern"] == "^[A-Z]+-[0-9]+$"
-
-    def test_dynamic_pattern_with_none(self):
-        """Test DynamicPattern when context value is None."""
-        context = Context()
-        context.set("pattern", None)
-
-        schema = DynamicPattern["pattern"].generate_schema(context)
-
-        # Should return basic string schema
-        assert schema == {"type": "string"}
-
-    def test_dynamic_pattern_missing_key(self):
-        """Test DynamicPattern when key doesn't exist."""
-        context = Context()
-
-        schema = DynamicPattern["missing"].generate_schema(context)
-
-        # Should return basic string schema
-        assert schema == {"type": "string"}
-
-
-class TestDynamicConstraintsEdgeCases:
-    """Test DynamicConstraints edge cases."""
-
-    def test_dynamic_constraints_with_dict_value(self):
-        """Test DynamicConstraints when value is dict (not nested in 'schema' key)."""
-        context = Context()
-        # Direct schema without nesting
-        context.set(
-            "direct_schema",
-            {"type": "object", "properties": {"name": {"type": "string"}}, "required": ["name"]},
-        )
-
-        schema = DynamicConstraints["direct_schema"].generate_schema(context)
-
-        assert schema["type"] == "object"
-        assert "properties" in schema
-
-    def test_dynamic_constraints_with_none(self):
-        """Test DynamicConstraints when value is None."""
-        context = Context()
-        context.set("schema", None)
-
-        schema = DynamicConstraints["schema"].generate_schema(context)
-
-        # Returns empty dict when value is None
-        assert schema == {}
-
 

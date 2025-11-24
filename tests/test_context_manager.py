@@ -1,13 +1,13 @@
 """Tests for ContextManager class."""
 
-import pytest
 from unittest.mock import Mock, patch
+
+import pytest
 from openai.types.chat import (
-    ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
+    ChatCompletionSystemMessageParam,
     ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
 )
 
 
@@ -44,7 +44,10 @@ class TestContextManager:
 
         cm = ContextManager(threshold=None)
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test" * 1000)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test" * 1000,
+            )
         ]
 
         assert cm.should_compact(messages) is False
@@ -55,7 +58,10 @@ class TestContextManager:
 
         cm = ContextManager(threshold=10000)
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="short message")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="short message",
+            )
         ]
 
         # Mock estimate_tokens to return value under threshold
@@ -68,7 +74,10 @@ class TestContextManager:
 
         cm = ContextManager(threshold=10000)
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test" * 5000)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test" * 5000,
+            )
         ]
 
         # Mock estimate_tokens to return value over threshold
@@ -81,7 +90,10 @@ class TestContextManager:
 
         cm = ContextManager(threshold=10000)
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test",
+            )
         ]
 
         # Mock estimate_tokens to return exact threshold
@@ -101,7 +113,10 @@ class TestContextManager:
 
         cm = ContextManager()
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Hello world")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello world",
+            )
         ]
 
         tokens = cm.estimate_tokens(messages)
@@ -114,9 +129,18 @@ class TestContextManager:
 
         cm = ContextManager()
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="You are helpful"),
-            ChatCompletionUserMessageParam(role="user", content="Hello"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Hi there!"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="You are helpful",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Hi there!",
+            ),
         ]
 
         tokens = cm.estimate_tokens(messages)
@@ -130,16 +154,49 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=2)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System prompt"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="old_1", content="Old tool result 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="old_2", content="Old tool result 2"),
-            ChatCompletionUserMessageParam(role="user", content="Message 3"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 3"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="recent_1", content="Recent tool result"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System prompt",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="old_1",
+                content="Old tool result 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="old_2",
+                content="Old tool result 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 3",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 3",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="recent_1",
+                content="Recent tool result",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -161,10 +218,23 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=1)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Important system prompt"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool result"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Important system prompt",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool result",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -179,12 +249,30 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=3)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 3"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 3",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -211,7 +299,10 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -225,11 +316,26 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=2)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Response 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Response 2",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -252,11 +358,26 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 2",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -275,11 +396,28 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=2)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
         ]
 
         # First compaction
@@ -287,8 +425,15 @@ class TestContextManager:
 
         # Add more messages
         compacted1.extend([
-            ChatCompletionUserMessageParam(role="user", content="Message 3"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="3", content="Tool 3"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 3",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="3",
+                content="Tool 3",
+            ),
         ])
 
         # Second compaction
@@ -306,8 +451,15 @@ class TestContextManager:
         cm = ContextManager()
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool result with some content"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool result with some content",
+            ),
         ]
 
         tokens = cm.estimate_tokens(messages)
@@ -320,9 +472,19 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=100)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -348,9 +510,18 @@ class TestContextManager:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=2)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message"),
-            ChatCompletionAssistantMessageParam(role="assistant", content=None),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=None,
+            ),
         ]
 
         # Should not raise an error
@@ -404,7 +575,10 @@ class TestContextManager:
         cm = ContextManager(threshold=500, token_counter=custom_counter)
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test",
+            )
         ]
 
         # Should use custom counter
@@ -446,9 +620,18 @@ class TestContextManager:
         cm = ContextManager(threshold=5, token_counter=simple_counter)
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="msg1"),
-            ChatCompletionUserMessageParam(role="user", content="msg2"),
-            ChatCompletionUserMessageParam(role="user", content="msg3"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="msg1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="msg2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="msg3",
+            ),
         ]
 
         # 3 messages = 3 tokens
@@ -457,8 +640,14 @@ class TestContextManager:
 
         # Add more messages
         messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="msg4"),
-            ChatCompletionUserMessageParam(role="user", content="msg5"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="msg4",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="msg5",
+            ),
         ])
 
         # 5 messages = 5 tokens, should trigger at threshold
@@ -478,7 +667,10 @@ class TestContextManager:
         cm = ContextManager(threshold=50, token_counter=counting_counter)
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test",
+            )
         ]
 
         # Should call counter when checking
@@ -514,9 +706,18 @@ class TestContextManager:
         cm = ContextManager(strategy="summarization")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         # Should raise ValueError because provider/model not set
@@ -536,19 +737,42 @@ class TestContextManager:
         mock_provider = Mock()
         mock_response = Mock()
         mock_response.choices = [Mock()]
-        mock_response.choices[0].message.content = "Summary of previous conversation about topics A and B."
+        mock_response.choices[0].message.content = (
+            "Summary of previous conversation about topics A and B."
+        )
         mock_provider.chat.completions.create.return_value = mock_response
 
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old message 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Old response 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old message 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Old response 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Recent response 1"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old message 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Old response 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old message 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Old response 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Recent response 1",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -586,9 +810,18 @@ class TestContextManager:
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -618,10 +851,22 @@ class TestContextManager:
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Important system prompt"),
-            ChatCompletionUserMessageParam(role="user", content="Old 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Important system prompt",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -648,11 +893,26 @@ class TestContextManager:
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Msg 1"),
-            ChatCompletionUserMessageParam(role="user", content="Msg 2"),
-            ChatCompletionUserMessageParam(role="user", content="Msg 3"),
-            ChatCompletionUserMessageParam(role="user", content="Msg 4"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Msg 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Msg 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Msg 3",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Msg 4",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -665,7 +925,9 @@ class TestContextManager:
         assert call_args.kwargs["model"] == "gpt-4"
 
         # Verify summary message is in result
-        summary_messages = [m for m in compacted if "[COMPACTED CONTEXT" in str(m.get("content", ""))]
+        summary_messages = [
+            m for m in compacted if "[COMPACTED CONTEXT" in str(m.get("content", ""))
+        ]
         assert len(summary_messages) == 1
 
 
@@ -711,7 +973,10 @@ class TestContextManagerValidation:
 
         # Setting to None should disable compaction
         cm.threshold = None
-        messages = [ChatCompletionUserMessageParam(role="user", content="test" * 1000)]
+        messages = [ChatCompletionUserMessageParam(
+                        role="user",
+                        content="test" * 1000,
+                    )]
         assert cm.should_compact(messages) is False
 
         # Setting to negative (no validation after init)
@@ -766,7 +1031,10 @@ class TestContextManagerValidation:
         cm = ContextManager(threshold=None)
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="test" * 10000)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="test" * 10000,
+            )
         ]
 
         # Should never trigger compaction
@@ -807,9 +1075,18 @@ class TestContextManagerValidation:
         assert cm._model is None
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         # Should raise error
@@ -845,7 +1122,10 @@ class TestContextManagerValidation:
 
         cm = ContextManager(threshold=100, token_counter=none_counter)
 
-        messages = [ChatCompletionUserMessageParam(role="user", content="test")]
+        messages = [ChatCompletionUserMessageParam(
+                        role="user",
+                        content="test",
+                    )]
 
         # Now raises ValueError with validation (updated behavior)
         with pytest.raises(ValueError, match="Token counter must return int"):
@@ -872,8 +1152,14 @@ class TestStrategyEffectiveness:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
         ]
 
         # Add many tool messages
@@ -888,8 +1174,14 @@ class TestStrategyEffectiveness:
 
         # Add recent messages
         messages.extend([
-            ChatCompletionUserMessageParam(role="user", content="Recent user"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Recent assistant"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent user",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Recent assistant",
+            ),
         ])
 
         tokens_before = cm.estimate_tokens(messages)
@@ -919,20 +1211,31 @@ class TestStrategyEffectiveness:
 
         # Create long messages
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(15):
             messages.append(
                 ChatCompletionUserMessageParam(
                     role="user",
-                    content=f"This is a long user message with lots of content that should be summarized. Message number {i}. " * 10
+                    content=(
+                        f"This is a long user message with lots of content that "
+                        f"should be summarized. Message number {i}. "
+                    )
+                    * 10,
                 )
             )
             messages.append(
                 ChatCompletionAssistantMessageParam(
                     role="assistant",
-                    content=f"This is a long assistant response with detailed information. Response number {i}. " * 10
+                    content=(
+                        f"This is a long assistant response with detailed "
+                        f"information. Response number {i}. "
+                    )
+                    * 10,
                 )
             )
 
@@ -948,13 +1251,19 @@ class TestStrategyEffectiveness:
         from bestla.yggdrasil.context_manager import ContextManager
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add mix of messages with many tool results
         for i in range(30):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"User message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"User message {i}",
+                )
             )
             messages.append(
                 ChatCompletionToolMessageParam(
@@ -989,13 +1298,19 @@ class TestStrategyEffectiveness:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System prompt"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System prompt",
+            ),
         ]
 
         # Create scenario with lots of tool results
         for i in range(50):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Query {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Query {i}",
+                )
             )
             messages.append(
                 ChatCompletionToolMessageParam(
@@ -1023,7 +1338,10 @@ class TestStrategyEffectiveness:
         from bestla.yggdrasil.context_manager import ContextManager
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(20):
@@ -1080,12 +1398,18 @@ class TestStrategyEffectiveness:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(30):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
             messages.append(
                 ChatCompletionToolMessageParam(
@@ -1118,11 +1442,26 @@ class TestStrategyEffectiveness:
 
         # Only user and assistant messages, no tool messages
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 2",
+            ),
         ]
 
         tokens_before = cm.estimate_tokens(messages)
@@ -1146,7 +1485,10 @@ class TestStrategyEffectiveness:
             ),
             ChatCompletionAssistantMessageParam(
                 role="assistant",
-                content="Of course! Context compaction is a technique to reduce token usage by removing or summarizing old messages."
+                content=(
+                    "Of course! Context compaction is a technique to reduce token "
+                    "usage by removing or summarizing old messages."
+                ),
             ),
         ]
 
@@ -1171,8 +1513,14 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Important system prompt"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Important system prompt",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
         ]
 
         for i in range(30):
@@ -1184,7 +1532,12 @@ class TestMessagePreservationGuarantees:
                 )
             )
 
-        messages.append(ChatCompletionUserMessageParam(role="user", content="Recent message"))
+        messages.append(
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent message",
+            )
+        )
 
         compacted = cm.compact(messages)
 
@@ -1205,13 +1558,19 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=7)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add many old messages
         for i in range(50):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Old {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Old {i}",
+                )
             )
 
         # Add exactly 7 recent messages
@@ -1220,7 +1579,10 @@ class TestMessagePreservationGuarantees:
             content = f"Recent {i}"
             recent_contents.append(content)
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=content)
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=content,
+                )
             )
 
         compacted = cm.compact(messages)
@@ -1241,16 +1603,49 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
-            ChatCompletionUserMessageParam(role="user", content="User 3"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 3"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="3", content="Tool 3"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 3",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 3",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="3",
+                content="Tool 3",
+            ),
         ]
 
         compacted = cm.compact(messages)
@@ -1274,12 +1669,18 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(20):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Unique message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Unique message {i}",
+                )
             )
             messages.append(
                 ChatCompletionToolMessageParam(
@@ -1293,7 +1694,6 @@ class TestMessagePreservationGuarantees:
 
         # Check for duplicates by comparing content
         contents = [str(m.get("content", "")) for m in compacted]
-        unique_contents = set(contents)
 
         # Should have no duplicates (except possibly empty strings)
         non_empty_contents = [c for c in contents if c]
@@ -1306,22 +1706,44 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add old messages
         for i in range(20):
             messages.append(
-                ChatCompletionToolMessageParam(role="tool", tool_call_id=f"old_{i}", content=f"Old {i}")
+                ChatCompletionToolMessageParam(
+                    role="tool",
+                    tool_call_id=f"old_{i}",
+                    content=f"Old {i}",
+                )
             )
 
         # Add recent messages with specific order
         recent_messages = [
-            ChatCompletionUserMessageParam(role="user", content="Recent A"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Recent B"),
-            ChatCompletionUserMessageParam(role="user", content="Recent C"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Recent D"),
-            ChatCompletionUserMessageParam(role="user", content="Recent E"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent A",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Recent B",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent C",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Recent D",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent E",
+            ),
         ]
         messages.extend(recent_messages)
 
@@ -1352,12 +1774,18 @@ class TestMessagePreservationGuarantees:
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Critical system instructions"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Critical system instructions",
+            ),
         ]
 
         for i in range(15):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
 
         compacted = cm.compact(messages)
@@ -1373,30 +1801,61 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=6)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add old messages
         for i in range(20):
             messages.append(
-                ChatCompletionToolMessageParam(role="tool", tool_call_id=f"old_{i}", content=f"Old {i}")
+                ChatCompletionToolMessageParam(
+                    role="tool",
+                    tool_call_id=f"old_{i}",
+                    content=f"Old {i}",
+                )
             )
 
         # Add exactly 6 recent messages of mixed types
         recent_messages = [
-            ChatCompletionUserMessageParam(role="user", content="R1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="R2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="r3", content="R3"),
-            ChatCompletionUserMessageParam(role="user", content="R4"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="R5"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="r6", content="R6"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="R1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="R2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="r3",
+                content="R3",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="R4",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="R5",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="r6",
+                content="R6",
+            ),
         ]
         messages.extend(recent_messages)
 
         compacted = cm.compact(messages)
 
         # All 6 recent messages should be present
-        recent_in_compacted = [m for m in compacted if m.get("content", "") in ["R1", "R2", "R3", "R4", "R5", "R6"]]
+        recent_in_compacted = [
+            m
+            for m in compacted
+            if m.get("content", "") in ["R1", "R2", "R3", "R4", "R5", "R6"]
+        ]
         assert len(recent_in_compacted) == 6
 
     def test_empty_system_message_preserved(self):
@@ -1406,15 +1865,27 @@ class TestMessagePreservationGuarantees:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=2)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content=""),  # Empty content
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="",
+            ),  # Empty content
         ]
 
         for i in range(10):
             messages.append(
-                ChatCompletionToolMessageParam(role="tool", tool_call_id=f"tool_{i}", content=f"Result {i}")
+                ChatCompletionToolMessageParam(
+                    role="tool",
+                    tool_call_id=f"tool_{i}",
+                    content=f"Result {i}",
+                )
             )
 
-        messages.append(ChatCompletionUserMessageParam(role="user", content="Recent"))
+        messages.append(
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent",
+            )
+        )
 
         compacted = cm.compact(messages)
 
@@ -1433,7 +1904,10 @@ class TestCompactionLifecycle:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(20):
@@ -1448,7 +1922,10 @@ class TestCompactionLifecycle:
         # Recent messages
         for i in range(5):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Recent {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Recent {i}",
+                )
             )
 
         # First compaction
@@ -1478,13 +1955,19 @@ class TestCompactionLifecycle:
         )
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add messages to just under threshold
         while cm.estimate_tokens(messages) < 950:
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content="Message " * 10)
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content="Message " * 10,
+                )
             )
 
         # Should not trigger compaction yet
@@ -1492,7 +1975,10 @@ class TestCompactionLifecycle:
 
         # Add one more message to exceed threshold
         messages.append(
-            ChatCompletionUserMessageParam(role="user", content="Final message" * 20)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Final message" * 20,
+            )
         )
 
         # Should now trigger compaction
@@ -1505,7 +1991,10 @@ class TestCompactionLifecycle:
         cm = ContextManager(strategy="tool_result_clearing", preserve_recent=5)
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for cycle in range(5):
@@ -1536,7 +2025,10 @@ class TestCompactionLifecycle:
         )
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         # Add messages with tool results to ensure compaction is meaningful
@@ -1595,12 +2087,18 @@ class TestCompactionLifecycle:
         cm.set_summarization_config(mock_provider, "gpt-4")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         for i in range(15):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
 
         # First compaction with summarization
@@ -1613,7 +2111,10 @@ class TestCompactionLifecycle:
         # Add more messages
         for i in range(15, 25):
             compacted1.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
 
         # Second compaction
@@ -1651,15 +2152,20 @@ class TestExecutionContextWithContextManager:
 
         for i in range(50):
             conv.messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
 
         initial_count = len(conv.messages)
 
         exec_ctx = ExecutionContext(
             toolkits={},
-            independent_toolkit=Agent(provider=mock_provider_for_exec_ctx, model="gpt-4").independent_toolkit,
-            conversation_context=conv
+            independent_toolkit=Agent(
+                provider=mock_provider_for_exec_ctx, model="gpt-4"
+            ).independent_toolkit,
+            conversation_context=conv,
         )
 
         agent = Agent(provider=mock_provider_for_exec_ctx, model="gpt-4")
@@ -1680,22 +2186,32 @@ class TestExecutionContextWithContextManager:
         conv = ConversationContext(context_manager=cm)
 
         conv.messages.append(
-            ChatCompletionSystemMessageParam(role="system", content="System")
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            )
         )
         for i in range(20):
             conv.messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Old message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Old message {i}",
+                )
             )
             conv.messages.append(
                 ChatCompletionToolMessageParam(
-                    role="tool", tool_call_id=f"old_{i}", content=f"Old tool result {i}"
+                    role="tool",
+                    tool_call_id=f"old_{i}",
+                    content=f"Old tool result {i}",
                 )
             )
 
         exec_ctx = ExecutionContext(
             toolkits={},
-            independent_toolkit=Agent(provider=mock_provider_for_exec_ctx, model="gpt-4").independent_toolkit,
-            conversation_context=conv
+            independent_toolkit=Agent(
+                provider=mock_provider_for_exec_ctx, model="gpt-4"
+            ).independent_toolkit,
+            conversation_context=conv,
         )
 
         agent = Agent(provider=mock_provider_for_exec_ctx, model="gpt-4")
@@ -1720,8 +2236,10 @@ class TestExecutionContextWithContextManager:
 
         exec_ctx = ExecutionContext(
             toolkits={},
-            independent_toolkit=Agent(provider=mock_provider_for_exec_ctx, model="gpt-4").independent_toolkit,
-            conversation_context=conv
+            independent_toolkit=Agent(
+                provider=mock_provider_for_exec_ctx, model="gpt-4"
+            ).independent_toolkit,
+            conversation_context=conv,
         )
 
         agent = Agent(provider=mock_provider_for_exec_ctx, model="gpt-4")
@@ -1746,15 +2264,20 @@ class TestExecutionContextWithContextManager:
 
         exec_ctx = ExecutionContext(
             toolkits={},
-            independent_toolkit=Agent(provider=mock_provider_for_exec_ctx, model="gpt-4").independent_toolkit,
-            conversation_context=conv
+            independent_toolkit=Agent(
+                provider=mock_provider_for_exec_ctx, model="gpt-4"
+            ).independent_toolkit,
+            conversation_context=conv,
         )
 
         agent = Agent(provider=mock_provider_for_exec_ctx, model="gpt-4")
 
         for i in range(10):
             exec_ctx.conversation.messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Long message {i}" * 20)
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Long message {i}" * 20,
+                )
             )
             exec_ctx.conversation.messages.append(
                 ChatCompletionToolMessageParam(

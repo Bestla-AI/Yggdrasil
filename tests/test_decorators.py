@@ -1,11 +1,15 @@
 """Tests for decorators."""
 
+import asyncio
+import platform
 import time
 from typing import Tuple
 
 import pytest
 
-from bestla.yggdrasil.decorators import cache_result, rate_limit, retry
+from bestla.yggdrasil import tool
+from bestla.yggdrasil.decorators import cache_result, rate_limit, retry, retry_async, timeout
+from bestla.yggdrasil.tool import Tool
 
 
 class TestRetryDecorator:
@@ -376,18 +380,6 @@ class TestDecoratorsCombined:
         result, _ = combined_func(1)
         assert result == 2  # From cache
         assert call_count[0] == 2  # Didn't call function again
-"""Tests for decorator edge cases, including untested decorators."""
-
-import asyncio
-import platform
-import time
-from typing import Tuple
-
-import pytest
-
-from bestla.yggdrasil import tool
-from bestla.yggdrasil.decorators import cache_result, rate_limit, retry, retry_async, timeout
-from bestla.yggdrasil.tool import Tool
 
 
 class TestRetryAsyncDecorator:

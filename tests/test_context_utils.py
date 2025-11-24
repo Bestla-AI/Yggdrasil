@@ -1,12 +1,15 @@
 """Tests for context management utility functions."""
 
+from typing import cast
+from unittest.mock import Mock
+
 import pytest
-from unittest.mock import Mock, patch
 from openai.types.chat import (
-    ChatCompletionSystemMessageParam,
-    ChatCompletionUserMessageParam,
     ChatCompletionAssistantMessageParam,
+    ChatCompletionMessageParam,
+    ChatCompletionSystemMessageParam,
     ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
 )
 
 
@@ -24,7 +27,10 @@ class TestTokenEstimation:
         from bestla.yggdrasil.context_utils import estimate_tokens
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Hello world")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello world",
+            )
         ]
 
         tokens = estimate_tokens(messages)
@@ -65,13 +71,25 @@ class TestTokenEstimation:
         from bestla.yggdrasil.context_utils import estimate_tokens
 
         single_message = [
-            ChatCompletionUserMessageParam(role="user", content="Hello")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            )
         ]
 
         multiple_messages = [
-            ChatCompletionUserMessageParam(role="user", content="Hello"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Hi there!"),
-            ChatCompletionUserMessageParam(role="user", content="How are you?"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Hi there!",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="How are you?",
+            ),
         ]
 
         single_tokens = estimate_tokens(single_message)
@@ -84,7 +102,10 @@ class TestTokenEstimation:
         from bestla.yggdrasil.context_utils import estimate_tokens
 
         short_content = [
-            ChatCompletionUserMessageParam(role="user", content="Hi")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hi",
+            )
         ]
 
         long_content = [
@@ -104,7 +125,10 @@ class TestTokenEstimation:
         from bestla.yggdrasil.context_utils import estimate_tokens
 
         messages = [
-            ChatCompletionAssistantMessageParam(role="assistant", content=None)
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content=None,
+            )
         ]
 
         # Should not crash, should return base tokens for message structure
@@ -117,7 +141,10 @@ class TestTokenEstimation:
 
         # Empty content should still have some tokens for message structure
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="")
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="",
+            )
         ]
 
         tokens = estimate_tokens(messages)
@@ -132,12 +159,32 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
-            ChatCompletionUserMessageParam(role="user", content="User 3"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 3",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=1)
@@ -155,12 +202,32 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Old tool"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Recent tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Old tool",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Recent tool",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=3)
@@ -182,9 +249,18 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=1)
@@ -197,9 +273,21 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="3", content="Tool 3"),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="3",
+                content="Tool 3",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=1)
@@ -213,8 +301,15 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Important system"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Important system",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=0)
@@ -229,13 +324,36 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="U1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="A1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="T1"),
-            ChatCompletionUserMessageParam(role="user", content="U2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="A2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="T2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="U1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="A1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="T1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="U2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="A2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="T2",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=2)
@@ -251,9 +369,19 @@ class TestToolResultClearing:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=100)
@@ -276,9 +404,18 @@ class TestSummarizationUtils:
         mock_provider.chat.completions.create.return_value = mock_response
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="What's the weather?"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="It's sunny."),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="What's the weather?",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="It's sunny.",
+            ),
         ]
 
         summary_msg = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -299,8 +436,14 @@ class TestSummarizationUtils:
         mock_provider.chat.completions.create.return_value = mock_response
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="Custom system"),
-            ChatCompletionUserMessageParam(role="user", content="Hello"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="Custom system",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            ),
         ]
 
         summary_msg = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -325,7 +468,10 @@ class TestSummarizationUtils:
 
         mock_provider = Mock()
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
         ]
 
         result = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -338,11 +484,26 @@ class TestSummarizationUtils:
         from bestla.yggdrasil.context_utils import build_compacted_messages
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Old 1"),
-            ChatCompletionUserMessageParam(role="user", content="Old 2"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 1"),
-            ChatCompletionUserMessageParam(role="user", content="Recent 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Old 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent 2",
+            ),
         ]
 
         summary_msg = ChatCompletionUserMessageParam(
@@ -364,8 +525,14 @@ class TestSummarizationUtils:
         from bestla.yggdrasil.context_utils import build_compacted_messages
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Recent"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Recent",
+            ),
         ]
 
         compacted = build_compacted_messages(messages, None, keep_recent=1)
@@ -383,10 +550,23 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool",
+            ),
         ]
 
         # Should handle all types without error
@@ -401,12 +581,17 @@ class TestContextUtilsEdgeCases:
         messages = []
         for i in range(1000):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Message {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Message {i}",
+                )
             )
             if i % 3 == 0:
                 messages.append(
                     ChatCompletionToolMessageParam(
-                        role="tool", tool_call_id=str(i), content=f"Tool {i}"
+                        role="tool",
+                        tool_call_id=str(i),
+                        content=f"Tool {i}",
                     )
                 )
 
@@ -436,7 +621,9 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System with\nnewlines\tand\ttabs"),
+            ChatCompletionSystemMessageParam(
+                role="system", content="System with\nnewlines\tand\ttabs"
+            ),
             ChatCompletionToolMessageParam(
                 role="tool",
                 tool_call_id="1",
@@ -454,8 +641,15 @@ class TestContextUtilsEdgeCases:
 
         # No system message, and messages <= keep_recent
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
         ]
 
         # keep_recent=5 is larger than len(messages)=2
@@ -474,9 +668,18 @@ class TestContextUtilsEdgeCases:
 
         # System message + 2 user messages
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         # keep_recent=2, but after removing system, we have 2 messages
@@ -494,8 +697,14 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="User message"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant message"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User message",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant message",
+            ),
             ChatCompletionToolMessageParam(
                 role="tool",
                 tool_call_id="call_123",
@@ -539,10 +748,22 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import build_compacted_messages
 
         original_messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
-            ChatCompletionUserMessageParam(role="user", content="Message 3"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 3",
+            ),
         ]
 
         summary_msg = ChatCompletionUserMessageParam(
@@ -567,9 +788,18 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import build_compacted_messages
 
         original_messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         # No summary, keep_recent=0
@@ -587,8 +817,14 @@ class TestContextUtilsEdgeCases:
 
         # Create assistant message with tool_calls attribute
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Call some tools"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Calling tools"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Call some tools",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Calling tools",
+            ),
         ]
 
         tokens = estimate_tokens(messages)
@@ -600,10 +836,23 @@ class TestContextUtilsEdgeCases:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
         ]
 
         # keep_recent=0 means all messages are "old"
@@ -633,9 +882,18 @@ class TestContextUtilsErrorHandling:
         mock_provider.chat.completions.create.side_effect = Exception("API Error")
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         # Should raise exception (no error handling currently)
@@ -653,8 +911,14 @@ class TestContextUtilsErrorHandling:
         mock_provider.chat.completions.create.return_value = mock_response
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         summary_msg = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -674,8 +938,14 @@ class TestContextUtilsErrorHandling:
         mock_provider.chat.completions.create.return_value = mock_response
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Message 1"),
-            ChatCompletionUserMessageParam(role="user", content="Message 2"),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Message 2",
+            ),
         ]
 
         summary_msg = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -702,8 +972,14 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content=""),
-            ChatCompletionAssistantMessageParam(role="assistant", content=""),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="",
+            ),
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -716,9 +992,9 @@ class TestContextUtilsErrorHandling:
         """Test token estimation with malformed message structure."""
         from bestla.yggdrasil.context_utils import estimate_tokens
 
-        # Message missing content field
+        # Message missing content field (intentionally malformed for testing)
         messages = [
-            {"role": "user"},  # No content
+            cast(ChatCompletionMessageParam, {"role": "user"}),  # No content
         ]
 
         # Should handle gracefully
@@ -730,9 +1006,15 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            {"role": "tool"},  # Missing tool_call_id
-            ChatCompletionUserMessageParam(role="user", content="User"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            cast(ChatCompletionMessageParam, {"role": "tool"}),  # Missing tool_call_id (malformed)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User",
+            ),
         ]
 
         # Should handle gracefully
@@ -752,8 +1034,14 @@ class TestContextUtilsErrorHandling:
         # Create messages with very long content
         long_content = "A" * 100000  # 100k characters
         messages = [
-            ChatCompletionUserMessageParam(role="user", content=long_content),
-            ChatCompletionUserMessageParam(role="user", content=long_content),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=long_content,
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=long_content,
+            ),
         ]
 
         summary_msg = summarize_messages(messages, mock_provider, "gpt-4", keep_recent=0)
@@ -782,8 +1070,14 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import estimate_tokens
 
         messages = [
-            {"role": "user", "content": 123},  # Integer content
-            {"role": "user", "content": ["list", "content"]},  # List content
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "user", "content": 123}
+            ),  # Integer content (malformed)
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "user", "content": ["list", "content"]}
+            ),  # List content (malformed)
         ]
 
         # Should convert to string and estimate
@@ -795,9 +1089,15 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            ChatCompletionUserMessageParam(role="user", content="Valid message"),
-            {"role": "assistant"},  # Missing content
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1"),  # Missing content
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Valid message",
+            ),
+            cast(ChatCompletionMessageParam, {"role": "assistant"}),  # Missing content (malformed)
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+            ),  # Missing content
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -811,9 +1111,18 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            {"role": "developer", "content": "You are a helpful assistant."},
-            {"role": "user", "content": "Hello"},
-            {"role": "assistant", "content": "Hi there!"},
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "developer", "content": "You are a helpful assistant."}
+            ),  # Developer role (non-standard)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Hello",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Hi there!",
+            ),
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -828,8 +1137,14 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            {"role": "user", "content": "Get weather"},
-            {"role": "function", "name": "get_weather", "content": '{"temp": 72}'},
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Get weather",
+            ),
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "function", "name": "get_weather", "content": '{"temp": 72}'}
+            ),  # Function role (legacy)
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -844,7 +1159,10 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            {"role": "function", "content": "Function result without name"},
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "function", "content": "Function result without name"}
+            ),  # Missing name (malformed)
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -858,12 +1176,31 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            {"role": "system", "content": "System instructions"},
-            {"role": "developer", "content": "Developer instructions"},
-            {"role": "user", "content": "User message"},
-            {"role": "assistant", "content": "Assistant response"},
-            {"role": "tool", "tool_call_id": "call_123", "content": "Tool result"},
-            {"role": "function", "name": "my_func", "content": "Function result"},
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System instructions",
+            ),
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "developer", "content": "Developer instructions"}
+            ),  # Developer role (non-standard)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User message",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant response"
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="call_123",
+                content="Tool result"
+            ),
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "function", "name": "my_func", "content": "Function result"}
+            ),  # Function role (legacy)
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -881,8 +1218,14 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import _format_messages_for_summary
 
         messages = [
-            {"role": "custom_role", "content": "Custom message"},
-            {"role": "", "content": "Empty role"},
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "custom_role", "content": "Custom message"}
+            ),  # Custom role (invalid)
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "", "content": "Empty role"}
+            ),  # Empty role (invalid)
         ]
 
         formatted = _format_messages_for_summary(messages)
@@ -898,8 +1241,16 @@ class TestContextUtilsErrorHandling:
         mock_provider = Mock()
 
         messages = [
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Result 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Result 2"),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Result 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Result 2",
+            ),
         ]
 
         # Should attempt to summarize
@@ -918,13 +1269,36 @@ class TestContextUtilsErrorHandling:
         from bestla.yggdrasil.context_utils import clear_tool_results
 
         messages = [
-            ChatCompletionSystemMessageParam(role="system", content="System"),
-            ChatCompletionUserMessageParam(role="user", content="User 1"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 1"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="1", content="Tool 1"),
-            ChatCompletionUserMessageParam(role="user", content="User 2"),
-            ChatCompletionAssistantMessageParam(role="assistant", content="Assistant 2"),
-            ChatCompletionToolMessageParam(role="tool", tool_call_id="2", content="Tool 2"),
+            ChatCompletionSystemMessageParam(
+                role="system",
+                content="System",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 1",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 1",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="1",
+                content="Tool 1",
+            ),
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="User 2",
+            ),
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Assistant 2",
+            ),
+            ChatCompletionToolMessageParam(
+                role="tool",
+                tool_call_id="2",
+                content="Tool 2",
+            ),
         ]
 
         cleared = clear_tool_results(messages, keep_recent=2)
@@ -952,7 +1326,10 @@ class TestTokenEstimationEdgeCases:
         # 1 million character message
         large_content = "A" * 1000000
         messages = [
-            ChatCompletionUserMessageParam(role="user", content=large_content)
+            ChatCompletionUserMessageParam(
+                role="user",
+                content=large_content,
+            )
         ]
 
         tokens = estimate_tokens(messages)
@@ -969,7 +1346,10 @@ class TestTokenEstimationEdgeCases:
         messages = []
         for i in range(10000):
             messages.append(
-                ChatCompletionUserMessageParam(role="user", content=f"Msg {i}")
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Msg {i}",
+                )
             )
 
         tokens = estimate_tokens(messages)
@@ -1050,7 +1430,11 @@ def example_function():
         messages = [
             ChatCompletionUserMessageParam(
                 role="user",
-                content='{"key": "value", "nested": {"array": [1, 2, 3]}, "long_string": "' + 'x' * 1000 + '"}'
+                content=(
+                    '{"key": "value", "nested": {"array": [1, 2, 3]}, "long_string": "'
+                    + "x" * 1000
+                    + '"}'
+                ),
             ),
         ]
 
@@ -1163,9 +1547,9 @@ def example_function():
         """Test token estimation when tool_call_id is missing."""
         from bestla.yggdrasil.context_utils import estimate_tokens
 
-        # Tool message without tool_call_id field
+        # Tool message without tool_call_id field (malformed)
         messages = [
-            {"role": "tool", "content": "Tool result without ID"}
+            cast(ChatCompletionMessageParam, {"role": "tool", "content": "Tool result without ID"})
         ]
 
         # Should handle gracefully (tool_call_id just not counted)
@@ -1176,9 +1560,12 @@ def example_function():
         """Test token estimation when tool_call_id is None."""
         from bestla.yggdrasil.context_utils import estimate_tokens
 
-        # Tool message with None tool_call_id
+        # Tool message with None tool_call_id (malformed)
         messages = [
-            {"role": "tool", "tool_call_id": None, "content": "Tool result"}
+            cast(
+                ChatCompletionMessageParam,
+                {"role": "tool", "tool_call_id": None, "content": "Tool result"}
+            )
         ]
 
         # Should handle gracefully

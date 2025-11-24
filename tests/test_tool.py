@@ -1,6 +1,8 @@
 """Tests for Tool class."""
 
-from typing import Tuple
+from typing import List, Optional, Tuple, Union
+
+import pytest
 
 from bestla.yggdrasil import Context, DynamicStr, Tool, tool
 
@@ -157,14 +159,6 @@ class TestTool:
         # Should default to string type
         param_schema = schema["function"]["parameters"]["properties"]["param"]
         assert param_schema == {"type": "string"}
-"""Tests for Tool edge cases and boundary conditions."""
-
-from typing import List, Optional, Tuple, Union
-
-import pytest
-
-from bestla.yggdrasil import Context, tool
-from bestla.yggdrasil.tool import Tool
 
 
 class TestToolReturnFormats:
@@ -530,20 +524,6 @@ class TestToolAsProperty:
         assert callable(my_tool.function)
         assert my_tool.function(5) == (6, {})
 """Tests to cover remaining uncovered lines."""
-
-from typing import Tuple
-from unittest.mock import Mock
-
-import pytest
-
-from bestla.yggdrasil import Agent, Context, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
-from bestla.yggdrasil.dynamic_types import (
-    DynamicConst,
-    DynamicFloat,
-    DynamicInt,
-    DynamicStr,
-)
 
 
 class TestToolExecuteEdgeCases:

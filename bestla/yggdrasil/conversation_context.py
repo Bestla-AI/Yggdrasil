@@ -3,9 +3,11 @@
 Manages conversation state including messages and context compaction.
 """
 
-from typing import List, TYPE_CHECKING
+from typing import TYPE_CHECKING, List
 
-from openai.types.chat import ChatCompletionMessageParam
+from openai.types.chat import (
+    ChatCompletionMessageParam,
+)
 
 if TYPE_CHECKING:
     from bestla.yggdrasil.context_manager import ContextManager
@@ -56,7 +58,10 @@ class ConversationContext:
 
             # With initial messages
             ctx = ConversationContext(messages=[
-                {"role": "system", "content": "You are helpful"}
+                ChatCompletionSystemMessageParam(
+                    role="system",
+                    content="You are helpful",
+                )
             ])
 
             # With context management
@@ -88,8 +93,14 @@ class ConversationContext:
 
         Example:
             ctx.messages = [
-                {"role": "user", "content": "Hello"},
-                {"role": "assistant", "content": "Hi there!"}
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content="Hello",
+                ),
+                ChatCompletionAssistantMessageParam(
+                    role="assistant",
+                    content="Hi there!",
+                )
             ]
         """
         if value is None:

@@ -5,6 +5,9 @@ from typing import Tuple
 from unittest.mock import Mock
 
 import pytest
+from openai.types.chat import (
+    ChatCompletionUserMessageParam,
+)
 
 from bestla.yggdrasil import Agent
 
@@ -39,7 +42,13 @@ class TestMalformedLLMResponses:
 
         # Should handle JSON parse error gracefully
         with pytest.raises((json.JSONDecodeError, ValueError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_missing_function_field(self):
         """Test tool_call without 'function' field."""
@@ -61,7 +70,13 @@ class TestMalformedLLMResponses:
 
         # Should handle missing field gracefully
         with pytest.raises((AttributeError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_empty_tool_calls_and_no_content(self):
         """Test response with empty tool_calls and no content."""
@@ -80,7 +95,13 @@ class TestMalformedLLMResponses:
 
         # Should handle gracefully (might return or raise)
         try:
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
             assert len(ctx.conversation.messages) >= 1
         except Exception:
             pass
@@ -113,7 +134,13 @@ class TestMalformedLLMResponses:
         # Should handle unknown tool gracefully
         # Might return error message to LLM
         try:
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=2)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=2
+            )
         except (KeyError, ValueError, Exception):
             # Expected - unknown tool should raise
             pass
@@ -152,7 +179,13 @@ class TestMalformedLLMResponses:
         agent.add_tool("test_tool", test_tool)
 
         # Should ignore extra fields and work normally
-        response, ctx2 = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        response, ctx2 = agent.run(
+            [ChatCompletionUserMessageParam(
+                 role="user",
+                 content="test",
+             )],
+            max_iterations=1
+        )
 
     def test_malformed_arguments_structure(self):
         """Test arguments that parse as JSON but have wrong structure."""
@@ -181,7 +214,13 @@ class TestMalformedLLMResponses:
 
         # Should handle wrong structure
         with pytest.raises((TypeError, ValueError, Exception)):
-            response, ctx3 = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx3 = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
 
 class TestProviderErrors:
@@ -190,42 +229,74 @@ class TestProviderErrors:
     def test_provider_network_failure(self):
         """Test handling of network failures."""
         mock_provider = Mock()
-        mock_provider.chat.completions.create.side_effect = ConnectionError("Network unavailable")
+        mock_provider.chat.completions.create.side_effect = ConnectionError(
+            "Network unavailable"
+        )
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(ConnectionError, match="Network unavailable"):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_provider_rate_limit_error(self):
         """Test handling of rate limit errors."""
         mock_provider = Mock()
-        mock_provider.chat.completions.create.side_effect = Exception("Rate limit exceeded")
+        mock_provider.chat.completions.create.side_effect = Exception(
+            "Rate limit exceeded"
+        )
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(Exception, match="Rate limit exceeded"):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_provider_timeout(self):
         """Test handling of provider timeout."""
         mock_provider = Mock()
-        mock_provider.chat.completions.create.side_effect = TimeoutError("Request timeout")
+        mock_provider.chat.completions.create.side_effect = TimeoutError(
+            "Request timeout"
+        )
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(TimeoutError, match="Request timeout"):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_provider_authentication_error(self):
         """Test handling of authentication errors."""
         mock_provider = Mock()
-        mock_provider.chat.completions.create.side_effect = PermissionError("Invalid API key")
+        mock_provider.chat.completions.create.side_effect = PermissionError(
+            "Invalid API key"
+        )
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(PermissionError, match="Invalid API key"):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_provider_returns_none(self):
         """Test handling when provider returns None."""
@@ -235,7 +306,13 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises((AttributeError, TypeError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_provider_returns_empty_choices(self):
         """Test handling when provider returns empty choices list."""
@@ -245,7 +322,13 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises((IndexError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
 
 class TestToolExecutionErrors:
@@ -289,7 +372,13 @@ class TestToolExecutionErrors:
 
         agent.add_tool("failing_tool", failing_tool)
 
-        response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=2)
+        response, ctx = agent.run(
+            [ChatCompletionUserMessageParam(
+                 role="user",
+                 content="test",
+             )],
+            max_iterations=2
+        )
 
         assert any("error" in str(msg).lower() for msg in ctx.conversation.messages)
 
@@ -320,7 +409,13 @@ class TestToolExecutionErrors:
 
         # Should handle format error
         with pytest.raises((TypeError, ValueError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
     def test_tool_execution_with_missing_required_arg(self):
         """Test tool execution when LLM doesn't provide required argument."""
@@ -348,7 +443,13 @@ class TestToolExecutionErrors:
 
         # Should handle missing argument error
         with pytest.raises((TypeError, KeyError, Exception)):
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
 
 
 class TestResponseEdgeCases:
@@ -371,9 +472,18 @@ class TestResponseEdgeCases:
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        response, ctx = agent.run(
+            [ChatCompletionUserMessageParam(
+                 role="user",
+                 content="test",
+             )],
+            max_iterations=1
+        )
 
-        assert any(len(str(msg.get("content", ""))) > 1000000 for msg in ctx.conversation.messages)
+        assert any(
+            len(str(msg.get("content", ""))) > 1000000
+            for msg in ctx.conversation.messages
+        )
 
     def test_unicode_in_response(self):
         """Test handling of Unicode characters in response."""
@@ -389,7 +499,13 @@ class TestResponseEdgeCases:
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        result, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        result, ctx = agent.run(
+            [ChatCompletionUserMessageParam(
+                 role="user",
+                 content="test",
+             )],
+            max_iterations=1
+        )
 
         assert result == "Hello 世界 🌍 مرحبا"
 
@@ -409,7 +525,13 @@ class TestResponseEdgeCases:
 
         # Should handle null bytes
         try:
-            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run(
+                [ChatCompletionUserMessageParam(
+                     role="user",
+                     content="test",
+                 )],
+                max_iterations=1
+            )
         except (ValueError, UnicodeDecodeError):
             # Might raise depending on JSON handling
             pass

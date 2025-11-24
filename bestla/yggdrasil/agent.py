@@ -3,24 +3,23 @@
 import json
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, List, Tuple, TYPE_CHECKING
+from typing import TYPE_CHECKING, Any, Callable, Dict, List, Tuple
 
 from openai import OpenAI
 from openai.types.chat import (
     ChatCompletionAssistantMessageParam,
-    ChatCompletionMessageParam,
     ChatCompletionSystemMessageParam,
     ChatCompletionToolMessageParam,
     ChatCompletionUserMessageParam,
 )
 
+from bestla.yggdrasil.conversation_context import ConversationContext
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 from bestla.yggdrasil.tool import Tool
 from bestla.yggdrasil.toolkit import Toolkit
-from bestla.yggdrasil.conversation_context import ConversationContext
 
 if TYPE_CHECKING:
-    from bestla.yggdrasil.context_manager import ContextManager
+    pass
 
 
 class ExecutionContext:
@@ -280,8 +279,8 @@ class Agent:
         else:
             return [
                 ChatCompletionToolMessageParam(
-                    tool_call_id=call["id"],
                     role="tool",
+                    tool_call_id=call["id"],
                     content=f"Error: Unknown toolkit '{prefix}'",
                 )
                 for call in tool_calls
@@ -298,16 +297,16 @@ class Agent:
                 if result["success"]:
                     formatted_results.append(
                         ChatCompletionToolMessageParam(
-                            tool_call_id=call["id"],
                             role="tool",
+                            tool_call_id=call["id"],
                             content=str(result["result"]),
                         )
                     )
                 else:
                     formatted_results.append(
                         ChatCompletionToolMessageParam(
-                            tool_call_id=call["id"],
                             role="tool",
+                            tool_call_id=call["id"],
                             content=f"Error: {result['error']}",
                         )
                     )
@@ -322,24 +321,24 @@ class Agent:
                     if result["success"]:
                         formatted_results.append(
                             ChatCompletionToolMessageParam(
-                                tool_call_id=call["id"],
                                 role="tool",
+                                tool_call_id=call["id"],
                                 content=str(result["result"]),
                             )
                         )
                     else:
                         formatted_results.append(
                             ChatCompletionToolMessageParam(
-                                tool_call_id=call["id"],
                                 role="tool",
+                                tool_call_id=call["id"],
                                 content=f"Error: {result['error']}",
                             )
                         )
                 else:
                     formatted_results.append(
                         ChatCompletionToolMessageParam(
-                            tool_call_id=call["id"],
                             role="tool",
+                            tool_call_id=call["id"],
                             content="Error: Pipeline failed before this tool executed",
                         )
                     )
@@ -441,10 +440,11 @@ class Agent:
 
         if not conv.messages or conv.messages[0].get("role") != "system":
             conv.messages.insert(
-                0, ChatCompletionSystemMessageParam(
+                0,
+                ChatCompletionSystemMessageParam(
                     role="system",
-                    content=self.system_prompt
-                )
+                    content=self.system_prompt,
+                ),
             )
 
         conv.messages.append(
@@ -468,10 +468,12 @@ class Agent:
 
             message = response.choices[0].message
 
-            conv.messages.append(ChatCompletionAssistantMessageParam(
-                role="assistant",
-                content=message.content,
-            ))
+            conv.messages.append(
+                ChatCompletionAssistantMessageParam(
+                    role="assistant",
+                    content=message.content,
+                )
+            )
 
             if not message.tool_calls:
                 return message.content or "", execution_context

@@ -8,7 +8,6 @@ from unittest.mock import Mock
 import pytest
 
 from bestla.yggdrasil import Agent, Context, ExecutionContext, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
 
 
 class TestCircularReferences:

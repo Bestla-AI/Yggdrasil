@@ -8,7 +8,6 @@ from unittest.mock import Mock
 import pytest
 
 from bestla.yggdrasil import Agent, Context, DynamicStr, ExecutionContext, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
 

@@ -5,9 +5,13 @@ from typing import Tuple
 from unittest.mock import Mock
 
 import pytest
+from openai.types.chat import (
+    ChatCompletionAssistantMessageParam,
+    ChatCompletionToolMessageParam,
+    ChatCompletionUserMessageParam,
+)
 
 from bestla.yggdrasil import Agent, Context, ExecutionContext, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
 
@@ -187,8 +191,20 @@ class TestAgentMessageHandling:
         conv = ConversationContext()
 
         for i in range(10000):
-            role = "user" if i % 2 == 0 else "assistant"
-            conv.messages.append({"role": role, "content": f"Message {i}"})
+            if i % 2 == 0:
+                conv.messages.append(
+                    ChatCompletionUserMessageParam(
+                        role="user",
+                        content=f"Message {i}",
+                    )
+                )
+            else:
+                conv.messages.append(
+                    ChatCompletionAssistantMessageParam(
+                        role="assistant",
+                        content=f"Message {i}"
+                    )
+                )
 
         assert len(conv.messages) >= 10000
         assert conv.messages[5000]["content"] == "Message 5000"
@@ -199,10 +215,32 @@ class TestAgentMessageHandling:
 
         conv = ConversationContext()
 
-        conv.messages.append({"role": "user", "content": "Query"})
-        conv.messages.append({"role": "assistant", "content": "I'll use a tool", "tool_calls": []})
-        conv.messages.append({"role": "tool", "content": "Tool result", "tool_call_id": "123"})
-        conv.messages.append({"role": "assistant", "content": "Final answer"})
+        conv.messages.append(
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Query",
+            )
+        )
+        conv.messages.append(
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="I'll use a tool",
+                tool_calls=[]
+            )
+        )
+        conv.messages.append(
+            ChatCompletionToolMessageParam(
+                role="tool",
+                content="Tool result",
+                tool_call_id="123"
+            )
+        )
+        conv.messages.append(
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Final answer"
+            )
+        )
 
         assert len(conv.messages) >= 4
 
@@ -218,8 +256,18 @@ class TestAgentMessageHandling:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         conv = ConversationContext()
-        conv.messages.append({"role": "user", "content": "Previous query"})
-        conv.messages.append({"role": "assistant", "content": "Previous response"})
+        conv.messages.append(
+            ChatCompletionUserMessageParam(
+                role="user",
+                content="Previous query",
+            )
+        )
+        conv.messages.append(
+            ChatCompletionAssistantMessageParam(
+                role="assistant",
+                content="Previous response"
+            )
+        )
 
         initial_count = len(conv.messages)
 
@@ -229,7 +277,11 @@ class TestAgentMessageHandling:
             conversation_context=conv
         )
 
-        response, result_ctx = agent.run("New query", max_iterations=1, execution_context=exec_ctx)
+        response, result_ctx = agent.run(
+            "New query",
+            max_iterations=1,
+            execution_context=exec_ctx
+        )
 
         assert len(result_ctx.conversation.messages) > initial_count
 
@@ -495,7 +547,6 @@ class TestResourceCleanup:
 
     def test_execution_context_state_after_provider_error(self):
         """Test ExecutionContext state after provider error."""
-        from bestla.yggdrasil import ConversationContext, ExecutionContext
 
         mock_provider = Mock()
         agent = Agent(provider=mock_provider, model="gpt-4")
@@ -509,10 +560,16 @@ class TestResourceCleanup:
 
         message_count_after_success = len(ctx1.conversation.messages)
 
-        mock_provider.chat.completions.create.side_effect = ConnectionError("Network failure")
+        mock_provider.chat.completions.create.side_effect = ConnectionError(
+            "Network failure"
+        )
 
         try:
-            response, ctx2 = agent.run("Second query", max_iterations=1, execution_context=ctx1)
+            response, ctx2 = agent.run(
+                "Second query",
+                max_iterations=1,
+                execution_context=ctx1
+            )
         except ConnectionError:
             pass
 

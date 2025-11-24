@@ -1,8 +1,10 @@
 """Tests for Context class."""
 
+from typing import Tuple
+
 import pytest
 
-from bestla.yggdrasil import Context, ContextValidationError
+from bestla.yggdrasil import Context, ContextValidationError, Toolkit, tool
 
 
 class TestContext:
@@ -116,14 +118,6 @@ class TestContext:
         # Should not raise even though invalid
         context.set("priority", 10)
         assert context.get("priority") == 10
-"""Tests for Context edge cases and boundary conditions."""
-
-from typing import Tuple
-
-import pytest
-
-from bestla.yggdrasil import Context, Toolkit, tool
-from bestla.yggdrasil.exceptions import ContextValidationError
 
 
 class TestContextBoundaries:
@@ -901,6 +895,7 @@ class TestSpecialNumericValues:
     def test_dynamic_int_with_infinity_bounds(self):
         """Test DynamicInt with infinity as min/max."""
         import math
+
         from bestla.yggdrasil.dynamic_types import DynamicInt
         context = Context()
         context.set("range", {"minimum": -math.inf, "maximum": math.inf})

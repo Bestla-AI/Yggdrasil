@@ -7,6 +7,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Tuple
 from unittest.mock import Mock
 
+from openai.types.chat import ChatCompletionAssistantMessageParam, ChatCompletionUserMessageParam
+
 from bestla.yggdrasil import Agent, Context, Toolkit
 
 
@@ -62,7 +64,12 @@ class TestConcurrentContextModifications:
         def run_agent(run_id):
             """Run agent in separate thread."""
             # Each run should have isolated context
-            messages = [{"role": "user", "content": f"Run {run_id}"}]
+            messages = [
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Run {run_id}",
+                )
+            ]
             response, ctx = agent.run(messages, max_iterations=1)
             return run_id
 
@@ -196,7 +203,12 @@ class TestConcurrentAgentOperations:
         def access_messages(thread_id):
             """Access shared conversation (demonstrates race conditions)."""
             _ = len(shared_conv.messages)
-            shared_conv.messages.append({"role": "user", "content": f"Thread {thread_id}"})
+            shared_conv.messages.append(
+                ChatCompletionUserMessageParam(
+                    role="user",
+                    content=f"Thread {thread_id}",
+                )
+            )
             return len(shared_conv.messages)
 
         with ThreadPoolExecutor(max_workers=10) as executor:
@@ -223,7 +235,15 @@ class TestConcurrentAgentOperations:
 
         def run_parent():
             """Run parent agent."""
-            response, ctx = parent_agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = parent_agent.run(
+                [
+                    ChatCompletionUserMessageParam(
+                        role="user",
+                        content="test",
+                    )
+                ],
+                max_iterations=1,
+            )
 
         def execute_child():
             """Execute child agent directly."""
@@ -342,9 +362,20 @@ class TestResourceExhaustion:
         conv = ConversationContext()
 
         for i in range(1000):
-            conv.messages.append(
-                {"role": "user" if i % 2 == 0 else "assistant", "content": f"Message {i}"}
-            )
+            if i % 2 == 0:
+                conv.messages.append(
+                    ChatCompletionUserMessageParam(
+                        role="user",
+                        content=f"Message {i}",
+                    )
+                )
+            else:
+                conv.messages.append(
+                    ChatCompletionAssistantMessageParam(
+                        role="assistant",
+                        content=f"Message {i}",
+                    )
+                )
 
         assert len(conv.messages) >= 1000
         assert conv.messages[500]["content"] == "Message 500"

@@ -9,7 +9,6 @@ from unittest.mock import Mock
 import pytest
 
 from bestla.yggdrasil import Agent, ExecutionContext, Toolkit, tool
-from bestla.yggdrasil.agent import ExecutionContext
 
 
 @pytest.fixture
@@ -139,7 +138,12 @@ class TestAgent:
         sub_agent.add_tool("add", lambda a, b: (a + b, {}))
 
         # Mock the run method to avoid OpenAI call
-        sub_agent.run = Mock(return_value=("Result: 5", ExecutionContext(sub_agent.toolkits, sub_agent.independent_toolkit)))
+        sub_agent.run = Mock(
+            return_value=(
+                "Result: 5",
+                ExecutionContext(sub_agent.toolkits, sub_agent.independent_toolkit),
+            )
+        )
 
         # Sub-agent's execute should return (result, {})
         result, updates = sub_agent.execute("Calculate 2 + 3")
@@ -149,10 +153,10 @@ class TestAgent:
     def test_clear_messages(self, mock_provider):
         """Test clear_messages is now a no-op (Agent is stateless)."""
         agent = Agent(provider=mock_provider, model="gpt-4")
-        
+
         # clear_messages() is now a no-op (Agent has no internal state)
         agent.clear_messages()  # Should not raise
-        
+
         # Agent is stateless - each run creates fresh context
         # This test now just verifies clear_messages doesn't crash
 
@@ -167,7 +171,9 @@ class TestAgent:
         # Mock the run method to modify context
         def mock_run(query, execution_context=None):
             # Create a context (simulating what real run does)
-            context = execution_context or ExecutionContext(agent.toolkits, agent.independent_toolkit)
+            context = execution_context or ExecutionContext(
+                agent.toolkits, agent.independent_toolkit
+            )
             # Modify the copied context
             context.toolkits["test"].context.set("key", "modified")
             return "result", context
@@ -369,7 +375,9 @@ class TestAgent:
         # Mock run to simulate state-dependent operations
         def mock_run(query, execution_context=None):
             # Create context (simulating real run behavior)
-            context = execution_context or ExecutionContext(agent.toolkits, agent.independent_toolkit)
+            context = execution_context or ExecutionContext(
+                agent.toolkits, agent.independent_toolkit
+            )
 
             # Get execution_id from query
             execution_id = query.split(":")[-1]
