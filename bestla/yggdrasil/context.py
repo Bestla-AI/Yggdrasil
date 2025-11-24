@@ -1,5 +1,6 @@
 """Context management for stateful toolkits."""
 
+import threading
 from typing import Any, Dict
 
 import jsonschema
@@ -63,6 +64,7 @@ class Context:
             validation_enabled: Whether to validate updates against schemas
         """
         self._data = Map()
+        self._lock = threading.Lock()  # Protects _data mutations
         self.validation_enabled = validation_enabled
         self.schema = ContextSchema()
 
@@ -101,7 +103,8 @@ class Context:
         """
         if self.validation_enabled:
             self.schema.validate(key, value)
-        self._data = self._data.set(key, value)
+        with self._lock:
+            self._data = self._data.set(key, value)
 
     def update(self, updates: Dict[str, Any]) -> None:
         """Update multiple context values.
@@ -117,10 +120,11 @@ class Context:
                 self.schema.validate(key, value)
 
         # Chain set operations for immutable Map
-        new_data = self._data
-        for key, value in updates.items():
-            new_data = new_data.set(key, value)
-        self._data = new_data
+        with self._lock:
+            new_data = self._data
+            for key, value in updates.items():
+                new_data = new_data.set(key, value)
+            self._data = new_data
 
     def has(self, key: str) -> bool:
         """Check if a context key exists.
@@ -150,12 +154,14 @@ class Context:
         Args:
             key: Context key to delete
         """
-        if key in self._data:
-            self._data = self._data.delete(key)
+        with self._lock:
+            if key in self._data:
+                self._data = self._data.delete(key)
 
     def clear(self) -> None:
         """Clear all context data."""
-        self._data = Map()
+        with self._lock:
+            self._data = Map()
 
     def copy(self) -> "Context":
         """Create a shallow copy of this context.
@@ -167,7 +173,8 @@ class Context:
             New Context instance with shared immutable data
         """
         new_context = Context(validation_enabled=self.validation_enabled)
-        new_context._data = self._data  # O(1) reference copy - Map is immutable!
+        with self._lock:
+            new_context._data = self._data  # O(1) reference copy - Map is immutable!
         # Note: schemas are not copied, they're toolkit-level configuration
         return new_context
 
@@ -177,7 +184,8 @@ class Context:
         Returns:
             Dictionary of context data
         """
-        return dict(self._data)
+        with self._lock:
+            return dict(self._data)
 
     def __repr__(self) -> str:
         return f"Context({self._data})"
