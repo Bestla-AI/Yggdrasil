@@ -1,19 +1,33 @@
-# Bestla Yggdrasil
+# Yggdrasil
 
-A stateful tool framework for building sophisticated AI applications.
+A stateful multi-agent tool framework for building sophisticated AI applications.
+
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Version](https://img.shields.io/badge/version-0.2.0-green.svg)](https://pypi.org/project/bestla-yggdrasil/)
 
 ## Overview
 
 Yggdrasil enables AI agents to use tools that:
 - **Maintain state** across multiple interactions
-- **Coordinate through finite state machines** (unlock/lock mechanisms)
+- **Control availability** through finite state machines (FSM)
+- **Generate dynamic schemas** based on runtime context
 - **Execute safely** with a three-tier concurrency model
 - **Compose hierarchically** (agents can use other agents as tools)
-- **Generate dynamic schemas** based on runtime context
 
 ### Core Innovation
 
-Traditional AI tool frameworks treat tools as stateless functions. Yggdrasil introduces **stateful toolkits** where tool availability and parameters dynamically change based on execution history and context, enabling complex workflows like authenticated sessions, multi-step transactions, and scoped operations.
+Traditional AI tool frameworks treat tools as stateless functions. Yggdrasil introduces **stateful toolkits** where tool availability and parameters dynamically adapt based on execution history and context, enabling complex workflows like authenticated sessions, multi-step transactions, and scoped operations.
+
+### Key Features
+
+- **Stateful Tools**: Maintain domain-specific context across interactions
+- **FSM Control**: Tools control their availability via abstract states
+- **Dynamic Types**: 12+ dynamic type constructors for context-driven schemas
+- **Safe Concurrency**: Three-tier execution model prevents race conditions
+- **Production Decorators**: Retry, timeout, caching, and rate limiting built-in
+- **Context Management**: Automatic conversation compaction for long sessions
+- **Hierarchical Agents**: Compose agents from specialized sub-agents
 
 ## Installation
 
@@ -481,15 +495,63 @@ result = coordinator.run(
 )
 ```
 
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+### Getting Started
+- [**Getting Started**](docs/getting-started.md) - Installation and quick start guide
+
+### Core Documentation
+- [**Core Concepts**](docs/core-concepts.md) - Agent, ExecutionContext, Toolkit, Tool, and Context
+- [**Dynamic Types**](docs/dynamic-types.md) - All 12+ dynamic type constructors with examples
+- [**State Management**](docs/state-management.md) - FSM patterns and workflows
+- [**Decorators**](docs/decorators.md) - Production-grade decorators (retry, timeout, cache, rate limiting)
+- [**Context Management**](docs/context-management.md) - Conversation compaction and token management
+- [**Concurrency**](docs/concurrency.md) - Three-tier concurrency model and thread safety
+
+### Advanced Topics
+- [**Best Practices**](docs/best-practices.md) - Design patterns, anti-patterns, and recommendations
+- [**Examples**](docs/examples.md) - Complete production-ready workflow examples
+
+## Architecture
+
+```
+Agent (stateless orchestrator)
+├── ExecutionContext (per-run state isolation)
+│   ├── Named Toolkits (plane::, github::)
+│   │   ├── Context (domain state)
+│   │   ├── Tools (with FSM metadata)
+│   │   └── Sequential execution
+│   ├── Independent Toolkit (stateless tools)
+│   │   └── Parallel execution
+│   └── ConversationContext (message history)
+│       └── ContextManager (optional compaction)
+```
+
+## Design Philosophy
+
+- **Stateless Agents, Stateful Execution**: Agents are reusable orchestrators; ExecutionContext holds all state for safe concurrency
+- **Declarative State Machines**: Tools declare state requirements/transitions; framework enforces workflow validity
+- **Context-Driven Adaptation**: Tool schemas and availability adapt dynamically to runtime context
+- **Safety First**: Sequential execution within toolkits prevents race conditions
+- **Performance Where Safe**: Independent operations run in parallel
+
 ## Contributing
 
-Contributions welcome! Please check the issues page.
+Contributions welcome! Please check the [issues page](https://github.com/BestlaAI/Yggdrasil/issues).
 
 ## License
 
-MIT
+MIT License - see [LICENSE](LICENSE) for details.
 
 ## Links
 
 - **Homepage**: https://github.com/BestlaAI/Yggdrasil
+- **PyPI**: https://pypi.org/project/bestla-yggdrasil/
 - **Issues**: https://github.com/BestlaAI/Yggdrasil/issues
+- **Documentation**: [docs/](docs/)
+
+---
+
+**Project Status**: Alpha (v0.2.0) - API may change before 1.0 release
