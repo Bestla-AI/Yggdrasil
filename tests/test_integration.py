@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from bestla.yggdrasil import Agent, Context, DynamicStr, Toolkit, tool
+from bestla.yggdrasil import Agent, Context, DynamicStr, ExecutionContext, Toolkit, tool
 from bestla.yggdrasil.agent import ExecutionContext
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
@@ -345,7 +345,7 @@ class TestConcurrentAgentModifications:
         mock_provider.chat.completions.create = slow_create
 
         def run_agent():
-            agent.run("test", max_iterations=1)
+            response, ctx = agent.run("test", max_iterations=1)
 
         def add_toolkit():
             execution_started.wait(timeout=2)
@@ -383,7 +383,7 @@ class TestConcurrentAgentModifications:
         mock_provider.chat.completions.create = slow_create
 
         def run_agent():
-            agent.run("test", max_iterations=1)
+            response, ctx2 = agent.run("test", max_iterations=1)
 
         def clear_messages():
             execution_in_progress.wait(timeout=2)

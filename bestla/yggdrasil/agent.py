@@ -3,7 +3,7 @@
 import json
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Any, Callable, Dict, List, Tuple
+from typing import Any, Callable, Dict, List, Tuple, TYPE_CHECKING
 
 from openai import OpenAI
 from openai.types.chat import (
@@ -17,6 +17,10 @@ from openai.types.chat import (
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 from bestla.yggdrasil.tool import Tool
 from bestla.yggdrasil.toolkit import Toolkit
+from bestla.yggdrasil.conversation_context import ConversationContext
+
+if TYPE_CHECKING:
+    from bestla.yggdrasil.context_manager import ContextManager
 
 
 class ExecutionContext:
@@ -30,26 +34,32 @@ class ExecutionContext:
     Attributes:
         toolkits: Dict mapping prefix to copied Toolkit instances
         independent_toolkit: Copied Toolkit for independent tools (no prefix)
+        conversation: ConversationContext managing messages and compaction
     """
 
     def __init__(
         self,
         toolkits: Dict[str, Toolkit],
         independent_toolkit: Toolkit,
+        conversation_context: ConversationContext | None = None,
     ):
         """Initialize execution context with copies of toolkits.
 
         Args:
             toolkits: Dict mapping prefix to Toolkit instance
             independent_toolkit: Toolkit for independent tools
+            conversation_context: Optional ConversationContext to use.
+                                If not provided, creates a new one.
         """
-        # Copy all toolkits using their custom copy() method
-        # This ensures proper handling of tools, filters, and context
+        # Deep copy toolkits for state isolation
         self.toolkits = {
             prefix: toolkit.copy()
             for prefix, toolkit in toolkits.items()
         }
         self.independent_toolkit = independent_toolkit.copy()
+
+        # Conversation shared (not copied) to allow inspection after run
+        self.conversation = conversation_context or ConversationContext()
 
 
 def _group_tool_calls_by_toolkit(
@@ -69,10 +79,8 @@ def _group_tool_calls_by_toolkit(
     for call in tool_calls:
         tool_name = call["function"]["name"]
 
-        # Check if it's a prefixed tool
         if "::" in tool_name:
             prefix, base_name = tool_name.split("::", 1)
-            # Remove prefix for toolkit execution
             groups[prefix].append(
                 {
                     "id": call["id"],
@@ -81,7 +89,6 @@ def _group_tool_calls_by_toolkit(
                 }
             )
         else:
-            # Independent tool
             groups["independent"].append(
                 {
                     "id": call["id"],
@@ -102,6 +109,26 @@ class Agent:
     - Execute toolkit groups in parallel
     - Execute tools within toolkit sequentially
     - Can be used as a Tool by other agents (hierarchical composition)
+
+    Warning:
+        Agent instances are not thread-safe. Do not modify conversation state
+        (messages, context_manager, etc.) from multiple threads concurrently.
+        For concurrent execution, create separate Agent instances or use
+        separate ExecutionContext instances.
+
+    Example:
+        # SAFE: Separate agents for concurrent execution
+        agent1 = Agent(provider=client, model="gpt-4")
+        agent2 = Agent(provider=client, model="gpt-4")
+        with ThreadPoolExecutor() as executor:
+            future1 = executor.submit(agent1.run, "Query 1")
+            future2 = executor.submit(agent2.run, "Query 2")
+
+        # UNSAFE: Same agent from multiple threads
+        agent = Agent(provider=client, model="gpt-4")
+        with ThreadPoolExecutor() as executor:
+            future1 = executor.submit(agent.run, "Query 1")  # Race condition!
+            future2 = executor.submit(agent.run, "Query 2")  # Race condition!
     """
 
     def __init__(
@@ -110,27 +137,49 @@ class Agent:
             model: str,
             system_prompt: str | None = None,
     ):
-        """Initialize agent.
+        """Initialize agent (stateless - no conversation state).
+
+        The Agent is a stateless, reusable tool. Each run() creates a fresh
+        ExecutionContext by default, making runs independent. Conversation state
+        is managed through ExecutionContext, not the Agent.
 
         Args:
             provider: OpenAI client instance
-            model: model name
+            model: Model name to use
             system_prompt: System prompt for the agent
+
+        Example:
+
+            agent = Agent(provider=client, model="gpt-4")
+
+
+            response1, ctx1 = agent.run("Research quantum computing")
+            response2, ctx2 = agent.run("Research neural networks")
+
+
+            print(ctx1.conversation.messages)  # Quantum conversation
+            print(ctx2.conversation.messages)  # Neural conversation
+
+
+            response3, ctx3 = agent.run("What about applications?", execution_context=ctx1)
+
+
+            cm = ContextManager(threshold=100000)
+            conv = ConversationContext(context_manager=cm)
+            ctx_with_cm = ExecutionContext(
+                toolkits=agent.toolkits,
+                independent_toolkit=agent.independent_toolkit,
+                conversation_context=conv
+            )
+            response4, ctx4 = agent.run("Long task", execution_context=ctx_with_cm)
         """
         self.model = model
         self.system_prompt = system_prompt or "You are a helpful assistant."
         self._provider = provider
 
-        # Toolkit management
         self.toolkits: Dict[str, Toolkit] = {}
-        self.toolkit_prefixes: Dict[str, str] = {}  # tool_name -> prefix
-
-        # Independent tools (no prefix, always parallel)
+        self.toolkit_prefixes: Dict[str, str] = {}
         self.independent_toolkit = Toolkit()
-        # Independent tools have no state requirements, so they're always available
-
-        # Conversation history
-        self.messages: List[ChatCompletionMessageParam] = []
 
     @property
     def provider(self) -> OpenAI:
@@ -155,7 +204,6 @@ class Agent:
         """
         self.toolkits[prefix] = toolkit
 
-        # Track which tools belong to this toolkit
         for tool_name in toolkit.tools.keys():
             prefixed_name = f"{prefix}::{tool_name}"
             self.toolkit_prefixes[prefixed_name] = prefix
@@ -181,7 +229,6 @@ class Agent:
             function=function,
             description=description,
         )
-        # Independent tools have no state requirements, so they're automatically available
         return tool
 
     def register_tool(self, tool: Tool) -> None:
@@ -191,7 +238,6 @@ class Agent:
             tool: Tool instance
         """
         self.independent_toolkit.register_tool(tool)
-        # Independent tools are automatically available based on their state requirements
 
     def _generate_all_schemas(self, context: ExecutionContext) -> List[dict]:
         """Generate schemas for all available tools from all toolkits.
@@ -204,15 +250,11 @@ class Agent:
         """
         schemas = []
 
-        # Get schemas from all toolkits (with prefixes)
         for prefix, toolkit in context.toolkits.items():
             toolkit_schemas = toolkit.generate_schemas()
-            # Add prefix to tool names
             for schema in toolkit_schemas:
                 schema["function"]["name"] = f"{prefix}::{schema['function']['name']}"
                 schemas.append(schema)
-
-        # Get schemas from independent tools (no prefix)
         independent_schemas = context.independent_toolkit.generate_schemas()
         schemas.extend(independent_schemas)
 
@@ -236,7 +278,6 @@ class Agent:
         elif prefix in context.toolkits:
             toolkit = context.toolkits[prefix]
         else:
-            # Unknown toolkit
             return [
                 ChatCompletionToolMessageParam(
                     tool_call_id=call["id"],
@@ -247,13 +288,11 @@ class Agent:
             ]
 
         try:
-            # Execute tools: parallel for independent, sequential for toolkits
             if prefix == "independent":
                 results = toolkit.execute_parallel(tool_calls)
             else:
                 results = toolkit.execute_sequential(tool_calls)
 
-            # Format results for LLM
             formatted_results = []
             for call, result in zip(tool_calls, results):
                 if result["success"]:
@@ -276,7 +315,6 @@ class Agent:
             return formatted_results
 
         except ToolkitPipelineError as e:
-            # Pipeline failed, return partial results
             formatted_results = []
             for idx, call in enumerate(tool_calls):
                 if idx < len(e.partial_results):
@@ -324,18 +362,13 @@ class Agent:
         Returns:
             List of tool result messages
         """
-        # Group by toolkit
         groups = _group_tool_calls_by_toolkit(tool_calls)
-
-        # Execute toolkit groups in parallel
         all_results = []
 
         if len(groups) == 1:
-            # Only one group, execute directly (no parallelism needed)
             prefix, calls = next(iter(groups.items()))
             all_results = self._execute_toolkit_group(context, prefix, calls)
         else:
-            # Multiple groups, execute in parallel
             with ThreadPoolExecutor() as executor:
                 futures = {
                     executor.submit(self._execute_toolkit_group, context, prefix, calls): prefix
@@ -353,34 +386,68 @@ class Agent:
             user_message: str,
             max_iterations: int = 100,
             stream: bool = False,
-    ) -> str:
-        """Run the agent conversation loop.
+            execution_context: ExecutionContext | None = None,
+    ) -> Tuple[str, ExecutionContext]:
+        """Run the agent conversation loop (stateless execution).
+
+        The agent is stateless - each run creates a fresh ExecutionContext by default,
+        making runs independent. Pass an ExecutionContext to continue a conversation.
 
         Args:
             user_message: User input
             max_iterations: Maximum number of LLM calls (prevents infinite loops)
             stream: Whether to stream responses (not implemented yet)
+            execution_context: Optional ExecutionContext to continue from.
+                             If None, creates fresh context (stateless execution).
 
         Returns:
-            Final agent response
-        """
-        # Create execution context with deep copies for state isolation
-        context = ExecutionContext(
-            toolkits=self.toolkits,
-            independent_toolkit=self.independent_toolkit,
-        )
+            Tuple of (final_response, execution_context)
+            - final_response: Agent's final text response
+            - execution_context: ExecutionContext with full conversation history
 
-        # Add system message if not already present
-        if not self.messages or self.messages[0].get("role") != "system":
-            self.messages.insert(
+        Example:
+            agent = Agent(provider=client, model="gpt-4")
+
+            # Stateless (default) - Each run is independent
+            response1, ctx1 = agent.run("Research quantum computing")
+            response2, ctx2 = agent.run("Research neural networks")
+
+
+            print(ctx1.conversation.messages)  # Quantum conversation
+            print(ctx2.conversation.messages)  # Neural conversation
+
+            # Stateful (explicit continuity)
+            response3, ctx3 = agent.run("What about applications?", execution_context=ctx1)
+
+            # With context management
+            cm = ContextManager(threshold=100000)
+            conv = ConversationContext(context_manager=cm)
+            ctx_managed = ExecutionContext(
+                toolkits=agent.toolkits,
+                independent_toolkit=agent.independent_toolkit,
+                conversation_context=conv
+            )
+            response4, ctx4 = agent.run("Long task", execution_context=ctx_managed)
+        """
+        # Create FRESH ExecutionContext by default (stateless)
+        if execution_context is None:
+            execution_context = ExecutionContext(
+                toolkits=self.toolkits,
+                independent_toolkit=self.independent_toolkit,
+                conversation_context=ConversationContext(),  # Fresh conversation!
+            )
+
+        conv = execution_context.conversation
+
+        if not conv.messages or conv.messages[0].get("role") != "system":
+            conv.messages.insert(
                 0, ChatCompletionSystemMessageParam(
                     role="system",
                     content=self.system_prompt
                 )
             )
 
-        # Add user message
-        self.messages.append(
+        conv.messages.append(
             ChatCompletionUserMessageParam(
                 role="user",
                 content=user_message,
@@ -388,62 +455,77 @@ class Agent:
         )
 
         for iteration in range(max_iterations):
-            # Generate tool schemas based on current context
-            tools = self._generate_all_schemas(context)
+            if conv.should_compact():
+                conv.compact()
 
-            # Call LLM
+            tools = self._generate_all_schemas(execution_context)
+
             response = self.provider.chat.completions.create(
                 model=self.model,
-                messages=self.messages,
+                messages=conv.messages,
                 tools=tools if tools else [],
             )
 
             message = response.choices[0].message
 
-            # Add assistant message to history
-            self.messages.append(ChatCompletionAssistantMessageParam(
+            conv.messages.append(ChatCompletionAssistantMessageParam(
                 role="assistant",
                 content=message.content,
             ))
 
-            # Check if we're done
             if not message.tool_calls:
-                # No tool calls, return response
-                return message.content or ""
+                return message.content or "", execution_context
 
-            # Execute tool calls
-            tool_results = self._execute_tool_calls(context, message.tool_calls)
+            tool_results = self._execute_tool_calls(execution_context, message.tool_calls)
+            conv.messages.extend(tool_results)
 
-            # Add tool results to messages
-            self.messages.extend(tool_results)
-
-            # Continue loop (AI will see tool results and respond)
-
-        # Max iterations reached
-        return "Maximum iterations reached. Please try rephrasing your request."
+        return "Maximum iterations reached. Please try rephrasing your request.", execution_context
 
     def execute(self, query: str) -> Tuple[str, dict]:
         """Execute agent as a tool (for hierarchical composition).
 
         This allows agents to be called by other agents.
-        State isolation is handled by ExecutionContext (deep copies).
+        Each execution is stateless - creates fresh ExecutionContext.
 
         Args:
             query: Input query
 
         Returns:
             Tuple of (response_string, empty_dict)
-            Context updates are always empty (organizational model)
-        """
-        # Run agent loop - ExecutionContext handles state isolation
-        response = self.run(query)
+            Context updates are always empty (sub-agents are isolated)
 
-        # Return response with no context updates (isolation)
-        return response, {}
+        Example:
+            # Agent as tool
+            research_agent = Agent(provider=client, model="gpt-4")
+            main_agent = Agent(provider=client, model="gpt-4")
+            main_agent.add_tool("research", research_agent.execute)
+
+            # When main agent calls research tool:
+            # 1. research_agent.execute("query") is called
+            # 2. Creates fresh ExecutionContext (isolated)
+            # 3. Returns response, discards execution context
+            # 4. Main agent sees only the response
+        """
+        response, _execution_context = self.run(query)
+        return response, {}  # Discard execution context for sub-agent isolation
 
     def clear_messages(self) -> None:
-        """Clear conversation history."""
-        self.messages.clear()
+        """DEPRECATED: Agent is now stateless.
+
+        This method is a no-op for backward compatibility.
+        To clear conversation state, create a fresh ExecutionContext instead.
+
+        Deprecated:
+            Use fresh ExecutionContext for each run() instead:
+
+            # Old (deprecated):
+            agent.clear_messages()
+            agent.run("New query")
+
+            # New (recommended):
+            response, ctx = agent.run("New query")  # Fresh context automatically!
+        """
+        pass
 
     def __repr__(self) -> str:
         return (

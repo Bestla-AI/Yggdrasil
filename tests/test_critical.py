@@ -7,7 +7,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from bestla.yggdrasil import Agent, Context, Toolkit, tool
+from bestla.yggdrasil import Agent, Context, ExecutionContext, Toolkit, tool
 from bestla.yggdrasil.agent import ExecutionContext
 
 
@@ -117,13 +117,13 @@ class TestStateLeakageAcrossExecutions:
         mock_provider.chat.completions.create = mock_create
 
         # First run
-        agent.run("test 1", max_iterations=2)
+        response, ctx = agent.run("test 1", max_iterations=2)
 
         # Original toolkit counter should still be 0 (isolated)
         assert toolkit.context.get("counter") == 0
 
         # Second run
-        agent.run("test 2", max_iterations=2)
+        response, ctx2 = agent.run("test 2", max_iterations=2)
 
         # Still should be 0 (each run is isolated)
         assert toolkit.context.get("counter") == 0
@@ -322,30 +322,26 @@ class TestMemoryLeaks:
         cached_function.clear_cache()
         assert cached_function.cache_size() == 0
 
-    def test_message_history_growth_with_many_turns(self):
-        """Test agent message history doesn't grow unbounded."""
+    def test_stateless_runs_dont_accumulate_in_agent(self):
+        """Test that stateless runs don't accumulate messages in Agent."""
         mock_provider = Mock()
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        # Mock provider to always finish immediately
         mock_provider.chat.completions.create.return_value = Mock(
             choices=[Mock(message=Mock(content="response", tool_calls=None))]
         )
 
-        initial_len = len(agent.messages)
+        contexts = []
+        for i in range(100):
+            response, ctx = agent.run(f"query {i}", max_iterations=1)
+            contexts.append(ctx)
 
-        # Run agent 1000 times
-        for i in range(1000):
-            agent.run(f"query {i}", max_iterations=1)
+        # Each context should be independent
+        for ctx in contexts:
+            assert len(ctx.conversation.messages) <= 3  # system + user + assistant
 
-        # Message history should grow
-        final_len = len(agent.messages)
-
-        # Should have 1000+ new messages (user + assistant per turn)
-        assert final_len > initial_len + 1000
-
-        # This demonstrates unbounded growth - in production,
-        # you'd want to implement message trimming
+        # Agent has no internal state
+        assert not hasattr(agent, 'messages')
 
     def test_context_copy_memory_efficiency(self):
         """Test context copies don't cause memory explosion."""
@@ -402,7 +398,7 @@ class TestNestedAgentExhaustion:
         agent_a.add_tool("call_b", agent_b.execute)
 
         # Execute top-level agent
-        result = agent_a.run("test deep hierarchy", max_iterations=1)
+        result, ctx = agent_a.run("test deep hierarchy", max_iterations=1)
 
         assert result == "done"
 
@@ -424,7 +420,7 @@ class TestNestedAgentExhaustion:
 
         # This creates 10 independent "threads" each calling sub-agent
         # Should not exhaust thread pool
-        result = main_agent.run("test", max_iterations=1)
+        result, ctx = main_agent.run("test", max_iterations=1)
 
         assert result == "done"
 

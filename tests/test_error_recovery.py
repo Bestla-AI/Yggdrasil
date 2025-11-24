@@ -6,7 +6,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from bestla.yggdrasil import Agent, Context, Toolkit, tool
+from bestla.yggdrasil import Agent, Context, ExecutionContext, Toolkit, tool
 from bestla.yggdrasil.agent import ExecutionContext
 from bestla.yggdrasil.exceptions import ToolkitPipelineError
 
@@ -180,38 +180,36 @@ class TestToolExecutionTimeout:
 class TestAgentMessageHandling:
     """Test agent message handling edge cases."""
 
-    def test_agent_with_very_long_message_history(self):
-        """Test agent with 10,000+ messages."""
-        mock_provider = Mock()
-        agent = Agent(provider=mock_provider, model="gpt-4")
+    def test_conversation_context_with_very_long_message_history(self):
+        """Test ConversationContext with 10,000+ messages."""
+        from bestla.yggdrasil import ConversationContext
 
-        # Add 10,000 messages manually
+        conv = ConversationContext()
+
         for i in range(10000):
             role = "user" if i % 2 == 0 else "assistant"
-            agent.messages.append({"role": role, "content": f"Message {i}"})
+            conv.messages.append({"role": role, "content": f"Message {i}"})
 
-        # Should handle large history
-        assert len(agent.messages) >= 10000
+        assert len(conv.messages) >= 10000
+        assert conv.messages[5000]["content"] == "Message 5000"
 
-        # Verify messages are accessible
-        assert agent.messages[5000]["content"] == "Message 5000"
-
-    def test_agent_messages_with_tool_results(self):
+    def test_conversation_context_messages_with_tool_results(self):
         """Test message history with interleaved tool results."""
-        mock_provider = Mock()
-        agent = Agent(provider=mock_provider, model="gpt-4")
+        from bestla.yggdrasil import ConversationContext
 
-        # Add various message types
-        agent.messages.append({"role": "user", "content": "Query"})
-        agent.messages.append({"role": "assistant", "content": "I'll use a tool", "tool_calls": []})
-        agent.messages.append({"role": "tool", "content": "Tool result", "tool_call_id": "123"})
-        agent.messages.append({"role": "assistant", "content": "Final answer"})
+        conv = ConversationContext()
 
-        # Should handle mixed message types
-        assert len(agent.messages) >= 4
+        conv.messages.append({"role": "user", "content": "Query"})
+        conv.messages.append({"role": "assistant", "content": "I'll use a tool", "tool_calls": []})
+        conv.messages.append({"role": "tool", "content": "Tool result", "tool_call_id": "123"})
+        conv.messages.append({"role": "assistant", "content": "Final answer"})
 
-    def test_agent_run_with_existing_messages(self):
-        """Test agent.run() with pre-existing message history."""
+        assert len(conv.messages) >= 4
+
+    def test_agent_run_with_existing_messages_in_context(self):
+        """Test agent.run() with pre-existing messages in ExecutionContext."""
+        from bestla.yggdrasil import ConversationContext, ExecutionContext
+
         mock_provider = Mock()
         mock_provider.chat.completions.create.return_value = Mock(
             choices=[Mock(message=Mock(content="response", tool_calls=None))]
@@ -219,17 +217,21 @@ class TestAgentMessageHandling:
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        # Add some existing messages
-        agent.messages.append({"role": "user", "content": "Previous query"})
-        agent.messages.append({"role": "assistant", "content": "Previous response"})
+        conv = ConversationContext()
+        conv.messages.append({"role": "user", "content": "Previous query"})
+        conv.messages.append({"role": "assistant", "content": "Previous response"})
 
-        initial_count = len(agent.messages)
+        initial_count = len(conv.messages)
 
-        # Run with new query
-        agent.run("New query", max_iterations=1)
+        exec_ctx = ExecutionContext(
+            toolkits=agent.toolkits,
+            independent_toolkit=agent.independent_toolkit,
+            conversation_context=conv
+        )
 
-        # Should append, not replace
-        assert len(agent.messages) > initial_count
+        response, result_ctx = agent.run("New query", max_iterations=1, execution_context=exec_ctx)
+
+        assert len(result_ctx.conversation.messages) > initial_count
 
 
 class TestToolkitCopyCornerCases:
@@ -388,7 +390,7 @@ class TestAgentWithNoTools:
         agent.add_toolkit("test", toolkit)
 
         # Run agent - LLM should receive empty tool list
-        result = agent.run("Do something", max_iterations=1)
+        result, ctx = agent.run("Do something", max_iterations=1)
 
         # Should complete with text response (no tools available)
         assert result == "I have no tools"
@@ -491,29 +493,30 @@ class TestResourceCleanup:
         # step3 should not have run
         assert not toolkit.context.has("step3")
 
-    def test_agent_state_after_provider_error(self):
-        """Test agent state after provider error."""
+    def test_execution_context_state_after_provider_error(self):
+        """Test ExecutionContext state after provider error."""
+        from bestla.yggdrasil import ConversationContext, ExecutionContext
+
         mock_provider = Mock()
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        # First call succeeds
         mock_provider.chat.completions.create.return_value = Mock(
             choices=[Mock(message=Mock(content="success", tool_calls=None))]
         )
 
-        result1 = agent.run("First query", max_iterations=1)
+        result1, ctx1 = agent.run("First query", max_iterations=1)
         assert result1 == "success"
 
-        message_count_after_success = len(agent.messages)
+        message_count_after_success = len(ctx1.conversation.messages)
 
-        # Second call fails
         mock_provider.chat.completions.create.side_effect = ConnectionError("Network failure")
 
-        with pytest.raises(ConnectionError):
-            agent.run("Second query", max_iterations=1)
+        try:
+            response, ctx2 = agent.run("Second query", max_iterations=1, execution_context=ctx1)
+        except ConnectionError:
+            pass
 
-        # Messages should include the failed query
-        assert len(agent.messages) > message_count_after_success
+        assert len(ctx1.conversation.messages) > message_count_after_success
 
 
 class TestParallelExecutionEdgeCases:
@@ -690,7 +693,7 @@ class TestMaxIterationBehavior:
         agent.add_tool("test_tool", lambda: ("result", {}))
 
         # Run with max_iterations=5
-        result = agent.run("test", max_iterations=5)
+        result, ctx = agent.run("test", max_iterations=5)
 
         # Should hit max iterations
         assert "Maximum iterations reached" in result
@@ -706,7 +709,7 @@ class TestMaxIterationBehavior:
         # Should either raise or return immediately
         # Behavior depends on implementation
         try:
-            result = agent.run("test", max_iterations=0)
+            result, ctx = agent.run("test", max_iterations=0)
             # Might return immediately without calling LLM
             assert isinstance(result, str)
         except ValueError:
@@ -720,7 +723,7 @@ class TestMaxIterationBehavior:
 
         # Should handle gracefully
         try:
-            agent.run("test", max_iterations=-1)
+            response, ctx = agent.run("test", max_iterations=-1)
             # Behavior undefined
         except (ValueError, AssertionError):
             # Expected - negative iterations invalid

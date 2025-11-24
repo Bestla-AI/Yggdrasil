@@ -131,7 +131,8 @@ class Context:
         Returns:
             True if key exists
         """
-        if "." in key:
+        # Support nested access: "project.id" (only for string keys)
+        if isinstance(key, str) and "." in key:
             parts = key.split(".")
             current = self._data
             for part in parts:

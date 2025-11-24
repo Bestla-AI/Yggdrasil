@@ -8,7 +8,7 @@ from unittest.mock import Mock
 
 import pytest
 
-from bestla.yggdrasil import Agent, Toolkit, tool
+from bestla.yggdrasil import Agent, ExecutionContext, Toolkit, tool
 from bestla.yggdrasil.agent import ExecutionContext
 
 
@@ -139,7 +139,7 @@ class TestAgent:
         sub_agent.add_tool("add", lambda a, b: (a + b, {}))
 
         # Mock the run method to avoid OpenAI call
-        sub_agent.run = Mock(return_value="Result: 5")
+        sub_agent.run = Mock(return_value=("Result: 5", ExecutionContext(sub_agent.toolkits, sub_agent.independent_toolkit)))
 
         # Sub-agent's execute should return (result, {})
         result, updates = sub_agent.execute("Calculate 2 + 3")
@@ -147,13 +147,14 @@ class TestAgent:
         assert result == "Result: 5"
 
     def test_clear_messages(self, mock_provider):
-        """Test clearing conversation history."""
+        """Test clear_messages is now a no-op (Agent is stateless)."""
         agent = Agent(provider=mock_provider, model="gpt-4")
-        agent.messages.append({"role": "user", "content": "test"})
-        assert len(agent.messages) > 0
-
-        agent.clear_messages()
-        assert len(agent.messages) == 0
+        
+        # clear_messages() is now a no-op (Agent has no internal state)
+        agent.clear_messages()  # Should not raise
+        
+        # Agent is stateless - each run creates fresh context
+        # This test now just verifies clear_messages doesn't crash
 
     def test_toolkit_isolation_in_execute(self, mock_provider):
         """Test that sub-agent toolkits are isolated via ExecutionContext."""
@@ -164,12 +165,12 @@ class TestAgent:
         agent.add_toolkit("test", toolkit)
 
         # Mock the run method to modify context
-        def mock_run(query):
+        def mock_run(query, execution_context=None):
             # Create a context (simulating what real run does)
-            context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
+            context = execution_context or ExecutionContext(agent.toolkits, agent.independent_toolkit)
             # Modify the copied context
             context.toolkits["test"].context.set("key", "modified")
-            return "result"
+            return "result", context
 
         agent.run = mock_run
 
@@ -366,9 +367,9 @@ class TestAgent:
         results_lock = threading.Lock()
 
         # Mock run to simulate state-dependent operations
-        def mock_run(query):
+        def mock_run(query, execution_context=None):
             # Create context (simulating real run behavior)
-            context = ExecutionContext(agent.toolkits, agent.independent_toolkit)
+            context = execution_context or ExecutionContext(agent.toolkits, agent.independent_toolkit)
 
             # Get execution_id from query
             execution_id = query.split(":")[-1]
@@ -387,7 +388,7 @@ class TestAgent:
             with results_lock:
                 results[execution_id] = final_value
 
-            return f"Result: {final_value}"
+            return f"Result: {final_value}", context  # Return tuple!
 
         agent.run = mock_run
 
@@ -559,7 +560,7 @@ class TestAgent:
         mock_provider.chat.completions.create.return_value = mock_response
 
         # Run with low max_iterations
-        result = agent.run("test query", max_iterations=3)
+        result, ctx = agent.run("test query", max_iterations=3)
 
         # Should hit max iterations
         assert "Maximum iterations reached" in result
@@ -579,7 +580,7 @@ class TestAgent:
 
         mock_provider.chat.completions.create.return_value = mock_response
 
-        result = agent.run("What is 2+2?")
+        result, ctx = agent.run("What is 2+2?")
 
         assert result == "Here is my answer"
         assert mock_provider.chat.completions.create.call_count == 1
@@ -597,17 +598,14 @@ class TestAgent:
 
         mock_provider.chat.completions.create.return_value = mock_response
 
-        # Clear any existing messages
-        agent.clear_messages()
-
         # Run
-        agent.run("Test query")
+        response, ctx = agent.run("Test query")
 
-        # Check messages
-        assert len(agent.messages) >= 2
-        assert agent.messages[0]["role"] == "system"
-        assert agent.messages[0]["content"] == "Custom system prompt"
-        assert agent.messages[1]["role"] == "user"
+        # Check messages via returned context
+        assert len(ctx.conversation.messages) >= 2
+        assert ctx.conversation.messages[0]["role"] == "system"
+        assert ctx.conversation.messages[0]["content"] == "Custom system prompt"
+        assert ctx.conversation.messages[1]["role"] == "user"
 
     def test_run_system_message_not_duplicated(self, mock_provider):
         """Test that system message is not duplicated on subsequent runs."""
@@ -623,13 +621,13 @@ class TestAgent:
         mock_provider.chat.completions.create.return_value = mock_response
 
         # First run
-        agent.run("First query")
+        response1, ctx1 = agent.run("First query")
 
-        # Second run
-        agent.run("Second query")
+        # Second run (using same conversation)
+        response2, ctx2 = agent.run("Second query", execution_context=ctx1)
 
         # Should only have one system message
-        system_messages = [m for m in agent.messages if m.get("role") == "system"]
+        system_messages = [m for m in ctx2.conversation.messages if m.get("role") == "system"]
         assert len(system_messages) == 1
 
     def test_repr(self, mock_provider):

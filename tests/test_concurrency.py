@@ -63,7 +63,7 @@ class TestConcurrentContextModifications:
             """Run agent in separate thread."""
             # Each run should have isolated context
             messages = [{"role": "user", "content": f"Run {run_id}"}]
-            agent.run(messages, max_iterations=1)
+            response, ctx = agent.run(messages, max_iterations=1)
             return run_id
 
         # Run concurrently
@@ -187,29 +187,23 @@ class TestConcurrentAgentOperations:
         assert len(results) == 20
         assert len(agent.toolkits) == 20
 
-    def test_concurrent_message_history_access(self):
-        """Test multiple threads reading/writing messages."""
-        mock_provider = Mock()
-        agent = Agent(provider=mock_provider, model="gpt-4")
+    def test_concurrent_conversation_context_access(self):
+        """Test multiple threads reading/writing shared ConversationContext (unsafe)."""
+        from bestla.yggdrasil import ConversationContext
+
+        shared_conv = ConversationContext()
 
         def access_messages(thread_id):
-            """Access message history."""
-            # Read messages
-            _ = len(agent.messages)
+            """Access shared conversation (demonstrates race conditions)."""
+            _ = len(shared_conv.messages)
+            shared_conv.messages.append({"role": "user", "content": f"Thread {thread_id}"})
+            return len(shared_conv.messages)
 
-            # Add a message
-            agent.messages.append({"role": "user", "content": f"Thread {thread_id}"})
-
-            # Read again
-            return len(agent.messages)
-
-        # Concurrent access
         with ThreadPoolExecutor(max_workers=10) as executor:
             futures = [executor.submit(access_messages, i) for i in range(50)]
             [f.result() for f in futures]
 
-        # Should have system message + 50 added messages
-        assert len(agent.messages) >= 50
+        assert len(shared_conv.messages) >= 50
 
     def test_concurrent_execute_and_run(self):
         """Test mixed agent.execute() and agent.run() calls."""
@@ -229,7 +223,7 @@ class TestConcurrentAgentOperations:
 
         def run_parent():
             """Run parent agent."""
-            parent_agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = parent_agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
         def execute_child():
             """Execute child agent directly."""
@@ -341,22 +335,19 @@ class TestResourceExhaustion:
         for copy in copies:
             assert len([k for k in copy._data.keys() if k.startswith("key_")]) == 1000
 
-    def test_message_history_growth(self):
-        """Test message history with 1000+ messages."""
-        mock_provider = Mock()
-        agent = Agent(provider=mock_provider, model="gpt-4")
+    def test_conversation_context_message_history_growth(self):
+        """Test ConversationContext with 1000+ messages."""
+        from bestla.yggdrasil import ConversationContext
 
-        # Add 1000 messages
+        conv = ConversationContext()
+
         for i in range(1000):
-            agent.messages.append(
+            conv.messages.append(
                 {"role": "user" if i % 2 == 0 else "assistant", "content": f"Message {i}"}
             )
 
-        # Message history should still be accessible
-        assert len(agent.messages) >= 1000
-
-        # Should be able to access messages
-        assert agent.messages[500]["content"] == "Message 500"
+        assert len(conv.messages) >= 1000
+        assert conv.messages[500]["content"] == "Message 500"
 
     def test_parallel_execution_stress(self):
         """Test 200+ parallel tool calls across toolkits."""

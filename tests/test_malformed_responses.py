@@ -39,7 +39,7 @@ class TestMalformedLLMResponses:
 
         # Should handle JSON parse error gracefully
         with pytest.raises((json.JSONDecodeError, ValueError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_missing_function_field(self):
         """Test tool_call without 'function' field."""
@@ -61,7 +61,7 @@ class TestMalformedLLMResponses:
 
         # Should handle missing field gracefully
         with pytest.raises((AttributeError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_empty_tool_calls_and_no_content(self):
         """Test response with empty tool_calls and no content."""
@@ -80,11 +80,9 @@ class TestMalformedLLMResponses:
 
         # Should handle gracefully (might return or raise)
         try:
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
-            # If it succeeds, should have messages
-            assert len(agent.messages) >= 1
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            assert len(ctx.conversation.messages) >= 1
         except Exception:
-            # Some handling might raise
             pass
 
     def test_unknown_tool_name(self):
@@ -115,7 +113,7 @@ class TestMalformedLLMResponses:
         # Should handle unknown tool gracefully
         # Might return error message to LLM
         try:
-            agent.run([{"role": "user", "content": "test"}], max_iterations=2)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=2)
         except (KeyError, ValueError, Exception):
             # Expected - unknown tool should raise
             pass
@@ -154,7 +152,7 @@ class TestMalformedLLMResponses:
         agent.add_tool("test_tool", test_tool)
 
         # Should ignore extra fields and work normally
-        agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        response, ctx2 = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_malformed_arguments_structure(self):
         """Test arguments that parse as JSON but have wrong structure."""
@@ -183,7 +181,7 @@ class TestMalformedLLMResponses:
 
         # Should handle wrong structure
         with pytest.raises((TypeError, ValueError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx3 = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
 
 class TestProviderErrors:
@@ -197,7 +195,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(ConnectionError, match="Network unavailable"):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_provider_rate_limit_error(self):
         """Test handling of rate limit errors."""
@@ -207,7 +205,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(Exception, match="Rate limit exceeded"):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_provider_timeout(self):
         """Test handling of provider timeout."""
@@ -217,7 +215,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(TimeoutError, match="Request timeout"):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_provider_authentication_error(self):
         """Test handling of authentication errors."""
@@ -227,7 +225,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises(PermissionError, match="Invalid API key"):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_provider_returns_none(self):
         """Test handling when provider returns None."""
@@ -237,7 +235,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises((AttributeError, TypeError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_provider_returns_empty_choices(self):
         """Test handling when provider returns empty choices list."""
@@ -247,7 +245,7 @@ class TestProviderErrors:
         agent = Agent(provider=mock_provider, model="gpt-4")
 
         with pytest.raises((IndexError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
 
 class TestToolExecutionErrors:
@@ -291,11 +289,9 @@ class TestToolExecutionErrors:
 
         agent.add_tool("failing_tool", failing_tool)
 
-        # Agent should handle tool error and return error message to LLM
-        agent.run([{"role": "user", "content": "test"}], max_iterations=2)
+        response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=2)
 
-        # Should have error message in conversation
-        assert any("error" in str(msg).lower() for msg in agent.messages)
+        assert any("error" in str(msg).lower() for msg in ctx.conversation.messages)
 
     def test_tool_returns_invalid_format(self):
         """Test handling when tool returns wrong format."""
@@ -324,7 +320,7 @@ class TestToolExecutionErrors:
 
         # Should handle format error
         with pytest.raises((TypeError, ValueError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
     def test_tool_execution_with_missing_required_arg(self):
         """Test tool execution when LLM doesn't provide required argument."""
@@ -352,7 +348,7 @@ class TestToolExecutionErrors:
 
         # Should handle missing argument error
         with pytest.raises((TypeError, KeyError, Exception)):
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
 
 class TestResponseEdgeCases:
@@ -375,11 +371,9 @@ class TestResponseEdgeCases:
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        # Should handle long content
-        agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
-        # Should have long message in history
-        assert any(len(str(msg.get("content", ""))) > 1000000 for msg in agent.messages)
+        assert any(len(str(msg.get("content", ""))) > 1000000 for msg in ctx.conversation.messages)
 
     def test_unicode_in_response(self):
         """Test handling of Unicode characters in response."""
@@ -395,7 +389,7 @@ class TestResponseEdgeCases:
 
         agent = Agent(provider=mock_provider, model="gpt-4")
 
-        result = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+        result, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
 
         assert result == "Hello 世界 🌍 مرحبا"
 
@@ -415,7 +409,7 @@ class TestResponseEdgeCases:
 
         # Should handle null bytes
         try:
-            agent.run([{"role": "user", "content": "test"}], max_iterations=1)
+            response, ctx = agent.run([{"role": "user", "content": "test"}], max_iterations=1)
         except (ValueError, UnicodeDecodeError):
             # Might raise depending on JSON handling
             pass

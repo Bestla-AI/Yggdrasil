@@ -8,8 +8,10 @@ Yggdrasil provides a framework for building AI agents that use tools with:
 - Three-tier concurrency model for safe parallel execution
 """
 
-from bestla.yggdrasil.agent import Agent
+from bestla.yggdrasil.agent import Agent, ExecutionContext
 from bestla.yggdrasil.context import Context, ContextSchema
+from bestla.yggdrasil.context_manager import ContextManager
+from bestla.yggdrasil.conversation_context import ConversationContext
 from bestla.yggdrasil.decorators import (
     cache_result,
     rate_limit,
@@ -46,10 +48,13 @@ __version__ = "0.2.0"
 __all__ = [
     # Core classes
     "Agent",
+    "ExecutionContext",
     "Toolkit",
     "Tool",
     "Context",
     "ContextSchema",
+    "ContextManager",
+    "ConversationContext",
     # Decorators
     "tool",
     # Dynamic types
